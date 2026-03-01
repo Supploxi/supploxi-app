@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Tariff Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .tariff-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:12px; }
+    .tariff-card.changed { border-color:var(--red); background:rgba(239,68,68,0.04); }
+    .tariff-card.increased { border-color:var(--red); }
+    .tariff-card.decreased { border-color:var(--green); }
+    .hts-code { font-family:monospace; font-size:16px; font-weight:700; letter-spacing:1px; }
+    .rate-display { font-size:32px; font-weight:700; }
+    .rate-change { font-size:13px; font-weight:600; padding:3px 10px; border-radius:20px; }
+    .rate-change.up { background:rgba(239,68,68,0.1); color:var(--red); }
+    .rate-change.down { background:rgba(0,212,170,0.1); color:var(--green); }
+    .impact-calc { background:var(--bg-primary); border-radius:var(--radius-sm); padding:16px; margin-top:16px; }
+    .action-btns { display:flex; gap:6px; opacity:0; transition:opacity 0.15s; }
+    .tariff-card:hover .action-btns { opacity:1; }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="page-content">
+
+      <!-- BANNER -->
+      <div style="background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(245,158,11,0.1));border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius);padding:20px;margin-bottom:24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="font-size:28px">⚠️</div>
+        <div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:4px">Section 301 Tariffs — 2025/2026 Alert</div>
+          <p style="font-size:13px;color:var(--text-muted);line-height:1.6">US tariffs on Chinese goods under Section 301 can significantly impact your landed costs. Track your HTS codes here to get instant alerts when rates change. Currently, tariffs on most Chinese goods range from 7.5% to 145% depending on product category.</p>
+        </div>
+      </div>
+
+      <div class="stats-grid" style="margin-bottom:24px">
+        <div class="stat-card"><div class="stat-label">HTS Codes Tracked</div><div class="stat-value" id="stat-tracked">—</div><div class="stat-sub">Under watch</div></div>
+        <div class="stat-card"><div class="stat-label">Rate Changes</div><div class="stat-value" id="stat-changes">—</div><div class="stat-sub" style="color:var(--red)">Since tracking started</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Tariff Rate</div><div class="stat-value" id="stat-avg">—</div><div class="stat-sub">Section 301 + base</div></div>
+        <div class="stat-card"><div class="stat-label">Est. Annual Impact</div><div class="stat-value" id="stat-impact">—</div><div class="stat-sub">On your imports</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:24px">
+        <!-- TRACKED CODES -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <h2 style="font-size:16px;font-weight:600">Your Tracked HTS Codes</h2>
+            <button class="btn btn-primary" onclick="openAddModal()">+ Add HTS Code</button>
+          </div>
+          <div id="tariff-list">
+            <div class="empty-state">
+              <div class="empty-state-icon">🔍</div>
+              <h3>No HTS codes tracked</h3>
+              <p>Add your product HTS codes to monitor tariff changes automatically</p>
+              <button class="btn btn-primary" onclick="openAddModal()">+ Add HTS Code</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SIDEBAR: INFO + QUICK CALC -->
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title" style="margin-bottom:16px">🧮 Tariff Impact Calculator</div>
+            <div class="form-group">
+              <label class="form-label">Order Value (USD)</label>
+              <input type="number" id="calc-value" class="form-input" placeholder="10000" oninput="calcImpact()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Base Tariff Rate (%)</label>
+              <input type="number" id="calc-base" class="form-input" placeholder="7.5" step="0.1" oninput="calcImpact()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Section 301 Rate (%)</label>
+              <input type="number" id="calc-301" class="form-input" placeholder="25" step="0.1" oninput="calcImpact()">
+            </div>
+            <div id="calc-result" style="display:none" class="impact-calc">
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Order Value</span><strong id="r-value">—</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Base Tariff</span><strong id="r-base">—</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Section 301</span><strong style="color:var(--orange)" id="r-301">—</strong></div>
+                <div style="height:1px;background:var(--border);margin:4px 0"></div>
+                <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Total Duty</span><strong style="color:var(--red);font-size:16px" id="r-total">—</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Effective Rate</span><strong id="r-effective">—</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">📚 Common HTS Codes</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+              ${[
+                ['6110.20.2079', 'Cotton knit sweaters', '27.5%'],
+                ['8517.12.0050', 'Smartphones', '20%'],
+                ['9403.20.0018', 'Metal furniture', '25%'],
+                ['9506.91.0030', 'Sports equipment', '25%'],
+                ['8471.30.0100', 'Laptops & tablets', '7.5%'],
+                ['6204.62.4011', 'Women\'s cotton pants', '14.9%'],
+                ['9401.61.4031', 'Upholstered chairs', '25%'],
+                ['7321.11.6000', 'Gas cooking stoves', '25%'],
+              ].map(([code, desc, rate]) => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('${code}','${desc}','${rate}')">
+                  <div>
+                    <div style="font-family:monospace;font-weight:600">${code}</div>
+                    <div style="color:var(--text-muted)">${desc}</div>
+                  </div>
+                  <span style="color:var(--orange);font-weight:600">${rate}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD HTS MODAL -->
+  <div class="modal-overlay" id="add-modal">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <span class="modal-title">Track HTS Code</span>
+        <button class="modal-close" onclick="closeAddModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">HTS Code <span class="required">*</span></label>
+          <input type="text" id="f-hts" class="form-input" placeholder="e.g. 9506.91.0030" style="font-family:monospace;font-size:16px;letter-spacing:1px">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Format: XXXX.XX.XXXX (10-digit US HTS code)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Product Description</label>
+          <input type="text" id="f-desc" class="form-input" placeholder="Sports equipment, yoga mats, etc.">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Link to Product (optional)</label>
+          <select id="f-product" class="form-select">
+            <option value="">No product linked</option>
+          </select>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Base Tariff Rate (%)</label>
+            <input type="number" id="f-base" class="form-input" placeholder="7.5" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Section 301 Rate (%)</label>
+            <input type="number" id="f-301" class="form-input" placeholder="25" step="0.1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Est. Annual Import Value (USD)</label>
+          <input type="number" id="f-annual" class="form-input" placeholder="50000">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Used to calculate annual duty impact</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Alert on Rate Change?</label>
+          <select id="f-alert" class="form-select">
+            <option value="true">Yes — notify me of any change</option>
+            <option value="false">No — track only</option>
+          </select>
+        </div>
+        <div class="form-error" id="modal-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveHTS()">Start Tracking</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let watches = [], products = []
+
+    async function load() {
+      const user = await window.requireAuth()
+      await window.initLayout({ page: 'tariffs', title: 'Tariff Tracker' })
+      const [{ data: w }, { data: p }] = await Promise.all([
+        window._sb.from('tariff_watches').select('*, products(name)').eq('user_id', user.id).order('created_at', { ascending: false }),
+        window._sb.from('products').select('id,name,hts_code').eq('user_id', user.id)
+      ])
+      watches = w || []
+      products = p || []
+
+      const sel = document.getElementById('f-product')
+      sel.innerHTML = '<option value="">No product linked</option>' + products.map(p => `<option value="${p.id}">${window.escapeHtml(p.name)}${p.hts_code?' ('+p.hts_code+')':''}</option>`).join('')
+
+      updateStats()
+      renderList()
+    }
+
+    function updateStats() {
+      const changes = watches.filter(w => w.rate_changed).length
+      const totalRate = watches.reduce((a,w) => a+(w.base_rate||0)+(w.section301_rate||0), 0)
+      const avgRate = watches.length ? (totalRate/watches.length).toFixed(1) : 0
+      const annualImpact = watches.reduce((a,w) => {
+        const rate = ((w.base_rate||0)+(w.section301_rate||0))/100
+        return a + (w.annual_import_value||0)*rate
+      }, 0)
+      document.getElementById('stat-tracked').textContent = watches.length
+      document.getElementById('stat-changes').textContent = changes
+      document.getElementById('stat-avg').textContent = avgRate + '%'
+      document.getElementById('stat-impact').textContent = window.formatCurrency(annualImpact) + '/yr'
+    }
+
+    function renderList() {
+      if (!watches.length) {
+        document.getElementById('tariff-list').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <h3>No HTS codes tracked</h3>
+            <p>Add your product HTS codes to monitor tariff changes automatically</p>
+            <button class="btn btn-primary" onclick="openAddModal()">+ Add HTS Code</button>
+          </div>`
+        return
+      }
+
+      document.getElementById('tariff-list').innerHTML = watches.map(w => {
+        const totalRate = (w.base_rate||0) + (w.section301_rate||0)
+        const annualDuty = ((w.annual_import_value||0) * totalRate/100)
+        const changed = w.rate_changed
+        const direction = w.rate_direction || 'up'
+
+        return `
+          <div class="tariff-card ${changed ? direction : ''}">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+                  <span class="hts-code">${window.escapeHtml(w.hts_code)}</span>
+                  ${changed ? `<span class="rate-change ${direction}">${direction==='up'?'▲ Rate Increased':'▼ Rate Decreased'}</span>` : ''}
+                  ${w.alert_on_change ? '<span style="font-size:11px;color:var(--green);background:var(--green-dim);padding:2px 8px;border-radius:20px">🔔 Alerts ON</span>' : ''}
+                </div>
+                <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+                  ${window.escapeHtml(w.description||'No description')}
+                  ${w.products ? ` · Linked to: <strong style="color:var(--text)">${window.escapeHtml(w.products.name)}</strong>` : ''}
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Base Rate</div>
+                    <div class="rate-display" style="font-size:24px">${w.base_rate||0}<span style="font-size:14px">%</span></div>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Section 301</div>
+                    <div class="rate-display" style="font-size:24px;color:var(--orange)">${w.section301_rate||0}<span style="font-size:14px">%</span></div>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Total Rate</div>
+                    <div class="rate-display" style="font-size:24px;color:${totalRate>=25?'var(--red)':totalRate>=10?'var(--orange)':'var(--green)'}">${totalRate}<span style="font-size:14px">%</span></div>
+                  </div>
+                </div>
+                ${w.annual_import_value ? `
+                  <div class="impact-calc" style="margin-top:12px">
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Annual Impact Estimate</div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px">
+                      <span>On ${window.formatCurrency(w.annual_import_value)} imports/yr</span>
+                      <strong style="color:var(--red)">${window.formatCurrency(annualDuty)}/yr in duties</strong>
+                    </div>
+                  </div>` : ''}
+              </div>
+              <div class="action-btns" style="flex-shrink:0">
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="deleteWatch('${w.id}')" title="Remove">🗑️</button>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:12px;border-top:1px solid var(--border);padding-top:8px">
+              Added ${window.formatRelativeTime(w.created_at)} · Last checked: ${w.last_checked_at ? window.formatRelativeTime(w.last_checked_at) : 'Never'}
+            </div>
+          </div>`
+      }).join('')
+    }
+
+    function calcImpact() {
+      const val = parseFloat(document.getElementById('calc-value').value) || 0
+      const base = parseFloat(document.getElementById('calc-base').value) || 0
+      const s301 = parseFloat(document.getElementById('calc-301').value) || 0
+      if (!val) { document.getElementById('calc-result').style.display = 'none'; return }
+      const baseDuty = val * base/100
+      const duty301 = val * s301/100
+      const total = baseDuty + duty301
+      const effective = base + s301
+      document.getElementById('calc-result').style.display = 'block'
+      document.getElementById('r-value').textContent = window.formatCurrency(val)
+      document.getElementById('r-base').textContent = window.formatCurrency(baseDuty) + ' (' + base + '%)'
+      document.getElementById('r-301').textContent = window.formatCurrency(duty301) + ' (' + s301 + '%)'
+      document.getElementById('r-total').textContent = window.formatCurrency(total)
+      document.getElementById('r-effective').textContent = effective + '% total'
+    }
+
+    function prefillHTS(code, desc, rate) {
+      document.getElementById('f-hts').value = code
+      document.getElementById('f-desc').value = desc
+      const rateNum = parseFloat(rate)
+      if (rateNum >= 20) {
+        document.getElementById('f-base').value = 7.5
+        document.getElementById('f-301').value = (rateNum - 7.5).toFixed(1)
+      } else {
+        document.getElementById('f-base').value = rateNum
+        document.getElementById('f-301').value = 0
+      }
+      openAddModal()
+    }
+
+    function openAddModal() { document.getElementById('add-modal').classList.add('active') }
+    function closeAddModal() { document.getElementById('add-modal').classList.remove('active') }
+
+    async function saveHTS() {
+      const hts = document.getElementById('f-hts').value.trim()
+      if (!hts) { document.getElementById('modal-error').textContent = 'HTS code is required.'; return }
+      const user = await window.getUser()
+      const { error } = await window._sb.from('tariff_watches').insert({
+        user_id: user.id,
+        hts_code: hts,
+        description: document.getElementById('f-desc').value.trim(),
+        product_id: document.getElementById('f-product').value || null,
+        base_rate: parseFloat(document.getElementById('f-base').value) || 0,
+        section301_rate: parseFloat(document.getElementById('f-301').value) || 0,
+        annual_import_value: parseFloat(document.getElementById('f-annual').value) || null,
+        alert_on_change: document.getElementById('f-alert').value === 'true',
+        last_checked_at: new Date().toISOString()
+      })
+      if (error) { document.getElementById('modal-error').textContent = error.message; return }
+      window.showToast('HTS code added! Monitoring started.', 'success')
+      closeAddModal()
+      await load()
+    }
+
+    async function deleteWatch(id) {
+      const { error } = await window._sb.from('tariff_watches').delete().eq('id', id)
+      if (error) { window.showToast('Error: ' + error.message, 'error'); return }
+      window.showToast('HTS code removed.', 'success')
+      await load()
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAddModal() })
+    load()
+  </script>
+</body>
+</html>

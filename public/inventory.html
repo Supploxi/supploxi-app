@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Inventory</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .action-btns { display:flex; gap:6px; opacity:0; transition:opacity 0.15s; }
+    tr:hover .action-btns { opacity:1; }
+    .movement-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="page-content">
+
+      <div class="tabs" id="main-tabs">
+        <div class="tab active" onclick="switchView('stock',this)">📦 Stock Levels</div>
+        <div class="tab" onclick="switchView('movements',this)">🔄 Movements History</div>
+        <div class="tab" onclick="switchView('valuation',this)">💰 Valuation</div>
+      </div>
+
+      <!-- STOCK VIEW -->
+      <div id="view-stock">
+        <div class="stats-grid" style="margin-bottom:24px">
+          <div class="stat-card"><div class="stat-label">Total SKUs</div><div class="stat-value" id="s-skus">—</div><div class="stat-sub">Tracked products</div></div>
+          <div class="stat-card"><div class="stat-label">In Stock</div><div class="stat-value" id="s-instock">—</div><div class="stat-sub" style="color:var(--green)">Healthy levels</div></div>
+          <div class="stat-card"><div class="stat-label">Low Stock</div><div class="stat-value" id="s-low">—</div><div class="stat-sub" style="color:var(--orange)">Below reorder point</div></div>
+          <div class="stat-card"><div class="stat-label">Out of Stock</div><div class="stat-value" id="s-out">—</div><div class="stat-sub" style="color:var(--red)">Urgent reorder</div></div>
+        </div>
+        <div class="table-container">
+          <div class="table-header">
+            <div class="search-wrapper" style="flex:1">
+              <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" class="search-input" id="stock-search" placeholder="Search product or SKU..." oninput="renderStock()">
+            </div>
+            <select class="form-select" style="width:150px" id="stock-filter" onchange="renderStock()">
+              <option value="">All Levels</option>
+              <option value="ok">In Stock</option>
+              <option value="low">Low Stock</option>
+              <option value="out">Out of Stock</option>
+            </select>
+            <button class="btn btn-primary" onclick="openAdjustModal()">± Adjust Stock</button>
+          </div>
+          <div id="stock-table"></div>
+        </div>
+      </div>
+
+      <!-- MOVEMENTS VIEW -->
+      <div id="view-movements" style="display:none">
+        <div class="table-container">
+          <div class="table-header">
+            <div class="search-wrapper" style="flex:1">
+              <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" class="search-input" id="mov-search" placeholder="Search movements..." oninput="renderMovements()">
+            </div>
+            <select class="form-select" style="width:150px" id="mov-type" onchange="renderMovements()">
+              <option value="">All Types</option>
+              <option value="in">Stock In</option>
+              <option value="out">Stock Out</option>
+              <option value="adjustment">Adjustment</option>
+              <option value="return">Return</option>
+              <option value="damaged">Damaged/Loss</option>
+            </select>
+          </div>
+          <div id="movements-table"></div>
+        </div>
+      </div>
+
+      <!-- VALUATION VIEW -->
+      <div id="view-valuation" style="display:none">
+        <div class="stats-grid" style="margin-bottom:24px">
+          <div class="stat-card"><div class="stat-label">Total Inventory Value</div><div class="stat-value" id="v-total">—</div><div class="stat-sub">At cost price</div></div>
+          <div class="stat-card"><div class="stat-label">At Retail Value</div><div class="stat-value" id="v-retail">—</div><div class="stat-sub">At selling price</div></div>
+          <div class="stat-card"><div class="stat-label">Potential Profit</div><div class="stat-value" id="v-profit">—</div><div class="stat-sub" style="color:var(--green)">If all sold</div></div>
+          <div class="stat-card"><div class="stat-label">Avg Margin</div><div class="stat-value" id="v-margin">—</div><div class="stat-sub">Gross margin %</div></div>
+        </div>
+        <div class="table-container">
+          <div id="valuation-table"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ADJUST MODAL -->
+  <div class="modal-overlay" id="adjust-modal">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <span class="modal-title">Adjust Stock</span>
+        <button class="modal-close" onclick="closeAdjustModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Product <span class="required">*</span></label>
+          <select id="adj-product" class="form-select" onchange="showCurrentStock()">
+            <option value="">Select product...</option>
+          </select>
+          <div id="adj-current" style="font-size:13px;color:var(--text-muted);margin-top:6px"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Movement Type <span class="required">*</span></label>
+          <select id="adj-type" class="form-select">
+            <option value="in">📥 Stock In (received goods)</option>
+            <option value="out">📤 Stock Out (sold / used)</option>
+            <option value="adjustment">± Manual Adjustment</option>
+            <option value="return">↩️ Return from customer</option>
+            <option value="damaged">⚠️ Damaged / Loss</option>
+          </select>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Quantity <span class="required">*</span></label>
+            <input type="number" id="adj-qty" class="form-input" placeholder="0" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit Cost (USD)</label>
+            <input type="number" id="adj-cost" class="form-input" placeholder="0.00" step="0.01">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reference (PO number, order ID...)</label>
+          <input type="text" id="adj-ref" class="form-input" placeholder="PO-2025-001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="adj-notes" class="form-textarea" placeholder="Reason for adjustment..."></textarea>
+        </div>
+        <div class="form-error" id="adj-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAdjustModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAdjustment()">Save Movement</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let products = [], movements = []
+
+    async function load() {
+      const user = await window.requireAuth()
+      await window.initLayout({ page: 'inventory', title: 'Inventory' })
+      const [{ data: p }, { data: m }] = await Promise.all([
+        window._sb.from('products').select('*, suppliers(company_name)').eq('user_id', user.id).order('name'),
+        window._sb.from('inventory_movements').select('*, products(name,sku)').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200)
+      ])
+      products = p || []
+      movements = m || []
+
+      const sel = document.getElementById('adj-product')
+      sel.innerHTML = '<option value="">Select product...</option>' + products.map(p => `<option value="${p.id}" data-stock="${p.stock_quantity||0}" data-cost="${p.cost_price||0}">${window.escapeHtml(p.name)} (${p.sku||'no SKU'})</option>`).join('')
+
+      renderStock()
+      renderMovements()
+      renderValuation()
+    }
+
+    function switchView(view, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+      if (el) el.classList.add('active')
+      document.getElementById('view-stock').style.display = view === 'stock' ? 'block' : 'none'
+      document.getElementById('view-movements').style.display = view === 'movements' ? 'block' : 'none'
+      document.getElementById('view-valuation').style.display = view === 'valuation' ? 'block' : 'none'
+    }
+
+    function renderStock() {
+      const q = document.getElementById('stock-search').value.toLowerCase()
+      const filter = document.getElementById('stock-filter').value
+      let list = products.filter(p => {
+        if (q && !p.name.toLowerCase().includes(q) && !(p.sku||'').toLowerCase().includes(q)) return false
+        const stock = p.stock_quantity || 0
+        const rp = p.reorder_point || 10
+        if (filter === 'out' && stock !== 0) return false
+        if (filter === 'low' && !(stock > 0 && stock <= rp)) return false
+        if (filter === 'ok' && stock <= rp) return false
+        return true
+      })
+
+      const inStock = products.filter(p => (p.stock_quantity||0) > (p.reorder_point||10)).length
+      const low = products.filter(p => (p.stock_quantity||0) > 0 && (p.stock_quantity||0) <= (p.reorder_point||10)).length
+      const out = products.filter(p => (p.stock_quantity||0) === 0).length
+      document.getElementById('s-skus').textContent = products.length
+      document.getElementById('s-instock').textContent = inStock
+      document.getElementById('s-low').textContent = low
+      document.getElementById('s-out').textContent = out
+
+      if (!list.length) {
+        document.getElementById('stock-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div><h3>No products found</h3></div>'
+        return
+      }
+
+      document.getElementById('stock-table').innerHTML = `
+        <table>
+          <thead><tr><th>Product</th><th>Supplier</th><th>Current Stock</th><th>Reorder Point</th><th>Reorder Qty</th><th>Avg Daily Sales</th><th>Days Left</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            ${list.map(p => {
+              const stock = p.stock_quantity || 0
+              const rp = p.reorder_point || 10
+              const daily = p.avg_daily_sales || 1
+              const daysLeft = Math.floor(stock / daily)
+              const status = stock === 0 ? 'out' : stock <= rp ? 'low' : 'ok'
+              const statusColor = status === 'out' ? 'var(--red)' : status === 'low' ? 'var(--orange)' : 'var(--green)'
+              const statusLabel = status === 'out' ? 'Out of Stock' : status === 'low' ? 'Low Stock' : 'In Stock'
+              return `<tr>
+                <td><div style="font-weight:600">${window.escapeHtml(p.name)}</div><div style="font-size:12px;color:var(--text-muted)">${p.sku||'—'}</div></td>
+                <td style="font-size:13px">${window.escapeHtml(p.suppliers?.company_name||'—')}</td>
+                <td><strong style="font-size:16px;color:${statusColor}">${stock}</strong></td>
+                <td>${rp}</td>
+                <td>${p.reorder_quantity||50}</td>
+                <td>${daily}/day</td>
+                <td style="color:${daysLeft < 14?'var(--red)':daysLeft<30?'var(--orange)':'inherit'};font-weight:600">${daysLeft}d</td>
+                <td><span class="badge" style="background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44">${statusLabel}</span></td>
+                <td onclick="event.stopPropagation()">
+                  <div class="action-btns">
+                    <button class="btn btn-sm btn-secondary" onclick="quickAdjust('${p.id}')">± Adjust</button>
+                  </div>
+                </td>
+              </tr>`
+            }).join('')}
+          </tbody>
+        </table>`
+    }
+
+    function renderMovements() {
+      const q = document.getElementById('mov-search').value.toLowerCase()
+      const type = document.getElementById('mov-type').value
+      let list = movements.filter(m => {
+        if (q && !(m.products?.name||'').toLowerCase().includes(q) && !(m.reference||'').toLowerCase().includes(q)) return false
+        if (type && m.movement_type !== type) return false
+        return true
+      })
+
+      if (!list.length) {
+        document.getElementById('movements-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔄</div><h3>No movements yet</h3><p>Stock movements will appear here when you adjust inventory</p></div>'
+        return
+      }
+
+      const typeConfig = {
+        in: { icon: '📥', color: 'var(--green)', label: 'Stock In' },
+        out: { icon: '📤', color: 'var(--red)', label: 'Stock Out' },
+        adjustment: { icon: '±', color: 'var(--blue)', label: 'Adjustment' },
+        return: { icon: '↩️', color: 'var(--purple)', label: 'Return' },
+        damaged: { icon: '⚠️', color: 'var(--orange)', label: 'Damaged' }
+      }
+
+      document.getElementById('movements-table').innerHTML = `
+        <table>
+          <thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Quantity</th><th>Unit Cost</th><th>Total Value</th><th>Reference</th><th>Notes</th></tr></thead>
+          <tbody>
+            ${list.map(m => {
+              const cfg = typeConfig[m.movement_type] || { icon: '•', color: 'var(--text-muted)', label: m.movement_type }
+              const isPositive = ['in','return','adjustment'].includes(m.movement_type) && m.quantity > 0
+              return `<tr>
+                <td style="font-size:12px;color:var(--text-muted)">${window.formatDate(m.created_at)}</td>
+                <td><strong>${window.escapeHtml(m.products?.name||'—')}</strong><div style="font-size:11px;color:var(--text-muted)">${m.products?.sku||''}</div></td>
+                <td><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:${cfg.color}">${cfg.icon} ${cfg.label}</span></td>
+                <td><strong style="color:${isPositive?'var(--green)':'var(--red)'}">${isPositive?'+':''}${m.quantity}</strong></td>
+                <td>${m.unit_cost ? window.formatCurrency(m.unit_cost) : '—'}</td>
+                <td>${m.unit_cost ? window.formatCurrency(Math.abs(m.quantity) * m.unit_cost) : '—'}</td>
+                <td style="font-size:12px;color:var(--text-muted)">${window.escapeHtml(m.reference||'—')}</td>
+                <td style="font-size:12px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${window.escapeHtml(m.notes||'—')}</td>
+              </tr>`
+            }).join('')}
+          </tbody>
+        </table>`
+    }
+
+    function renderValuation() {
+      const totalCost = products.reduce((a,p) => a + (p.stock_quantity||0) * (p.cost_price||0), 0)
+      const totalRetail = products.reduce((a,p) => a + (p.stock_quantity||0) * (p.selling_price||0), 0)
+      const totalProfit = totalRetail - totalCost
+      const avgMargin = products.length ? products.reduce((a,p) => a+(p.margin_percent||0), 0)/products.length : 0
+      document.getElementById('v-total').textContent = window.formatCurrency(totalCost)
+      document.getElementById('v-retail').textContent = window.formatCurrency(totalRetail)
+      document.getElementById('v-profit').textContent = window.formatCurrency(totalProfit)
+      document.getElementById('v-margin').textContent = avgMargin.toFixed(1) + '%'
+
+      const sorted = [...products].sort((a,b) => ((b.stock_quantity||0)*(b.cost_price||0)) - ((a.stock_quantity||0)*(a.cost_price||0)))
+      document.getElementById('valuation-table').innerHTML = `
+        <table>
+          <thead><tr><th>Product</th><th>Stock</th><th>Cost Price</th><th>Inventory Value</th><th>Retail Value</th><th>Potential Profit</th><th>Margin</th></tr></thead>
+          <tbody>
+            ${sorted.map(p => {
+              const stock = p.stock_quantity || 0
+              const costVal = stock * (p.cost_price || 0)
+              const retailVal = stock * (p.selling_price || 0)
+              const profit = retailVal - costVal
+              const margin = p.margin_percent || 0
+              return `<tr>
+                <td><strong>${window.escapeHtml(p.name)}</strong><div style="font-size:11px;color:var(--text-muted)">${p.sku||''}</div></td>
+                <td>${stock} units</td>
+                <td>${window.formatCurrency(p.cost_price)}</td>
+                <td><strong>${window.formatCurrency(costVal)}</strong></td>
+                <td>${window.formatCurrency(retailVal)}</td>
+                <td style="color:var(--green)"><strong>${window.formatCurrency(profit)}</strong></td>
+                <td style="color:${margin>=40?'var(--green)':margin>=20?'var(--orange)':'var(--red)'}"><strong>${margin.toFixed(1)}%</strong></td>
+              </tr>`
+            }).join('')}
+            <tr style="background:rgba(0,0,0,0.2);font-weight:600">
+              <td colspan="3" style="padding:14px 16px;text-align:right">TOTAL</td>
+              <td>${window.formatCurrency(totalCost)}</td>
+              <td>${window.formatCurrency(totalRetail)}</td>
+              <td style="color:var(--green)">${window.formatCurrency(totalProfit)}</td>
+              <td>${avgMargin.toFixed(1)}%</td>
+            </tr>
+          </tbody>
+        </table>`
+    }
+
+    function openAdjustModal() { document.getElementById('adjust-modal').classList.add('active') }
+    function closeAdjustModal() { document.getElementById('adjust-modal').classList.remove('active'); document.getElementById('adj-error').textContent = '' }
+
+    function quickAdjust(productId) {
+      document.getElementById('adj-product').value = productId
+      showCurrentStock()
+      openAdjustModal()
+    }
+
+    function showCurrentStock() {
+      const sel = document.getElementById('adj-product')
+      const opt = sel.options[sel.selectedIndex]
+      const el = document.getElementById('adj-current')
+      if (opt.value) {
+        el.textContent = `Current stock: ${opt.dataset.stock} units · Cost: ${window.formatCurrency(opt.dataset.cost)}`
+        document.getElementById('adj-cost').value = opt.dataset.cost || ''
+      } else {
+        el.textContent = ''
+      }
+    }
+
+    async function saveAdjustment() {
+      const productId = document.getElementById('adj-product').value
+      const type = document.getElementById('adj-type').value
+      const qty = parseInt(document.getElementById('adj-qty').value)
+      if (!productId) { document.getElementById('adj-error').textContent = 'Select a product.'; return }
+      if (!qty || qty < 1) { document.getElementById('adj-error').textContent = 'Quantity must be at least 1.'; return }
+
+      const user = await window.getUser()
+      const product = products.find(p => p.id === productId)
+      if (!product) return
+
+      const isOut = ['out','damaged'].includes(type)
+      const delta = isOut ? -qty : qty
+      const newStock = Math.max(0, (product.stock_quantity || 0) + delta)
+
+      const { error: movErr } = await window._sb.from('inventory_movements').insert({
+        user_id: user.id, product_id: productId,
+        movement_type: type, quantity: delta,
+        unit_cost: parseFloat(document.getElementById('adj-cost').value) || null,
+        reference: document.getElementById('adj-ref').value.trim(),
+        notes: document.getElementById('adj-notes').value.trim()
+      })
+      if (movErr) { document.getElementById('adj-error').textContent = movErr.message; return }
+
+      await window._sb.from('products').update({ stock_quantity: newStock }).eq('id', productId)
+      window.showToast('Stock updated!', 'success')
+      closeAdjustModal()
+      await load()
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAdjustModal() })
+    load()
+  </script>
+</body>
+</html>
