@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Sign In</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --border: #2a2d3e;
+      --primary: #00d4aa;
+      --primary-dark: #00b894;
+      --primary-glow: rgba(0,212,170,.15);
+      --text: #ffffff;
+      --text-muted: #8b8fa8;
+      --text-dim: #5a5e78;
+      --danger: #ff4757;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -.03em;
+    }
+
+    .logo span { color: var(--primary); }
+
+    .logo p {
+      color: var(--text-muted);
+      font-size: .875rem;
+      margin-top: 6px;
+    }
+
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 36px 32px;
+    }
+
+    .auth-card h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .auth-card .subtitle {
+      color: var(--text-muted);
+      font-size: .875rem;
+      margin-bottom: 28px;
+    }
+
+    .form-group { margin-bottom: 18px; }
+
+    .form-group label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: .9rem;
+      transition: border-color .2s;
+      outline: none;
+    }
+
+    .form-group input::placeholder { color: var(--text-dim); }
+    .form-group input:focus { border-color: var(--primary); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+      margin-top: 6px;
+    }
+
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .toggle-text {
+      text-align: center;
+      margin-top: 22px;
+      font-size: .85rem;
+      color: var(--text-muted);
+    }
+
+    .toggle-text a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color .15s;
+    }
+
+    .toggle-text a:hover { color: #00eabb; }
+
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: .85rem;
+      margin-bottom: 18px;
+      display: none;
+    }
+
+    .message.error {
+      display: block;
+      background: rgba(255,71,87,.12);
+      border: 1px solid rgba(255,71,87,.25);
+      color: var(--danger);
+    }
+
+    .message.success {
+      display: block;
+      background: var(--primary-glow);
+      border: 1px solid rgba(0,212,170,.3);
+      color: var(--primary);
+    }
+
+    .password-hint {
+      font-size: .72rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="logo">
+      <h1>Suppl<span>oxi</span></h1>
+      <p>Supplier Management for eCommerce</p>
+    </div>
+
+    <div class="auth-card">
+      <h2 id="authTitle">Welcome back</h2>
+      <p class="subtitle" id="authSubtitle">Sign in to your account</p>
+
+      <div class="message" id="message"></div>
+
+      <form id="authForm">
+        <div class="form-group" id="nameGroup" style="display:none">
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" placeholder="John Doe">
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@company.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+          <p class="password-hint" id="passwordHint" style="display:none">Minimum 6 characters</p>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Sign In</button>
+      </form>
+
+      <p class="toggle-text">
+        <span id="toggleQuestion">Don't have an account?</span>
+        <a id="toggleLink" onclick="toggleMode()">Sign Up</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    if (!window.supabase || !window.supabase.createClient) {
+      document.getElementById('message').textContent = 'Failed to load authentication library. Refresh the page.';
+      document.getElementById('message').className = 'message error';
+      throw new Error('Supabase CDN not loaded');
+    }
+
+    const SUPABASE_URL = 'https://nmlnwcclgufxjkklqntl.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tbG53Y2NsZ3VmeGpra2xxbnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNzk3MDgsImV4cCI6MjA4Nzk1NTcwOH0.8z2qgjtqUJpd0qrG7DmFPHGokvU-73iyFMwrF3IXML4';
+
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let isSignUp = false;
+
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = '/dashboard.html';
+    });
+
+    function toggleMode() {
+      isSignUp = !isSignUp;
+      document.getElementById('authTitle').textContent = isSignUp ? 'Create account' : 'Welcome back';
+      document.getElementById('authSubtitle').textContent = isSignUp ? 'Start managing your suppliers' : 'Sign in to your account';
+      document.getElementById('submitBtn').textContent = isSignUp ? 'Create Account' : 'Sign In';
+      document.getElementById('toggleQuestion').textContent = isSignUp ? 'Already have an account?' : "Don't have an account?";
+      document.getElementById('toggleLink').textContent = isSignUp ? 'Sign In' : 'Sign Up';
+      document.getElementById('nameGroup').style.display = isSignUp ? 'block' : 'none';
+      document.getElementById('passwordHint').style.display = isSignUp ? 'block' : 'none';
+      hideMessage();
+    }
+
+    function showMessage(text, type) {
+      const el = document.getElementById('message');
+      el.textContent = text;
+      el.className = 'message ' + type;
+    }
+
+    function hideMessage() {
+      document.getElementById('message').className = 'message';
+    }
+
+    document.getElementById('authForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      btn.disabled = true;
+      btn.textContent = isSignUp ? 'Creating account…' : 'Signing in…';
+      hideMessage();
+
+      try {
+        if (isSignUp) {
+          const fullName = document.getElementById('fullName').value.trim();
+          const { data, error } = await sb.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: fullName } }
+          });
+          if (error) throw error;
+
+          if (data.user && !data.session) {
+            showMessage('Check your email to confirm your account.', 'success');
+          } else {
+            window.location.href = '/dashboard.html';
+          }
+        } else {
+          const { data, error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          window.location.href = '/dashboard.html';
+        }
+      } catch (err) {
+        showMessage(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = isSignUp ? 'Create Account' : 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>

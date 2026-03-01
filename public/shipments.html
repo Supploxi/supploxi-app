@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Shipments</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/layout.js"></script>
+  <style>
+    .filter-date {
+      padding: 9px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: .85rem;
+      cursor: pointer;
+      outline: none;
+    }
+    .filter-date:focus { border-color: var(--primary); }
+    .filter-date::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+    .actions-cell {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .route-arrow {
+      color: var(--text-dim);
+      margin: 0 4px;
+    }
+
+    .tracking-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .tracking-link:hover { text-decoration: underline; }
+
+    .days-transit {
+      font-weight: 600;
+    }
+
+    .days-transit.warning { color: var(--warning); }
+    .days-transit.danger { color: var(--danger); }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    .confirm-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px);
+      z-index: 600;
+      align-items: center;
+      justify-content: center;
+    }
+    .confirm-overlay.show { display: flex; }
+
+    .confirm-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+
+    .confirm-box h3 { margin-bottom: 10px; font-size: 1rem; }
+    .confirm-box p { color: var(--text-muted); font-size: .85rem; margin-bottom: 20px; }
+    .confirm-box .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+  </style>
+</head>
+<body>
+
+  <div class="main" id="mainContent">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h2>Shipments</h2>
+      <button class="btn btn-primary" id="addShipmentBtn">+ Add Shipment</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-label">In Transit</div>
+        <div class="stat-value" id="statInTransit">--</div>
+        <div class="stat-sub">Active shipments</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Customs Clearance</div>
+        <div class="stat-value" id="statCustoms">--</div>
+        <div class="stat-sub">Awaiting clearance</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Delivered (30 Days)</div>
+        <div class="stat-value" id="statDelivered">--</div>
+        <div class="stat-sub">Last 30 days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Transit Time</div>
+        <div class="stat-value" id="statAvgTransit">--</div>
+        <div class="stat-sub">Days average</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search by tracking number...">
+      <select class="filter-select" id="statusFilter">
+        <option value="">All Statuses</option>
+        <option value="processing">Processing</option>
+        <option value="in transit">In Transit</option>
+        <option value="customs">Customs</option>
+        <option value="out for delivery">Out for Delivery</option>
+        <option value="delivered">Delivered</option>
+        <option value="exception">Exception</option>
+      </select>
+      <select class="filter-select" id="supplierFilter">
+        <option value="">All Suppliers</option>
+      </select>
+      <input type="date" class="filter-date" id="dateFrom" title="From date">
+      <input type="date" class="filter-date" id="dateTo" title="To date">
+    </div>
+
+    <!-- Table -->
+    <div class="section">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Tracking Number</th>
+              <th>Supplier</th>
+              <th>Route</th>
+              <th>Ship Date</th>
+              <th>ETA</th>
+              <th>Days in Transit</th>
+              <th>Status</th>
+              <th>Carrier</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="shipmentsBody">
+            <tr><td colspan="9" class="loading"><div class="spinner"></div> Loading shipments...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Shipment Modal -->
+  <div class="modal-overlay" id="shipmentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Add Shipment</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="shipmentForm">
+          <div class="form-group">
+            <label for="formPO">Purchase Order</label>
+            <select class="form-control" id="formPO">
+              <option value="">-- Select Purchase Order (optional) --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="formSupplier">Supplier</label>
+            <select class="form-control" id="formSupplier" required>
+              <option value="">-- Select Supplier --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="formTracking">Tracking Number</label>
+            <input type="text" class="form-control" id="formTracking" placeholder="e.g. 1Z999AA10123456784" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="formCarrier">Carrier</label>
+              <select class="form-control" id="formCarrier" required>
+                <option value="">-- Select Carrier --</option>
+                <option value="FedEx">FedEx</option>
+                <option value="UPS">UPS</option>
+                <option value="DHL">DHL</option>
+                <option value="USPS">USPS</option>
+                <option value="China Post">China Post</option>
+                <option value="YunExpress">YunExpress</option>
+                <option value="4PX">4PX</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="formMethod">Shipping Method</label>
+              <select class="form-control" id="formMethod">
+                <option value="">-- Select Method --</option>
+                <option value="Sea Freight">Sea Freight</option>
+                <option value="Air Freight">Air Freight</option>
+                <option value="Express">Express</option>
+                <option value="Rail">Rail</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="formShipDate">Ship Date</label>
+              <input type="date" class="form-control" id="formShipDate" required>
+            </div>
+            <div class="form-group">
+              <label for="formETA">Estimated Arrival</label>
+              <input type="date" class="form-control" id="formETA" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="formPackages">Number of Packages</label>
+              <input type="number" class="form-control" id="formPackages" placeholder="0" min="0">
+            </div>
+            <div class="form-group">
+              <label for="formWeight">Total Weight (kg)</label>
+              <input type="number" class="form-control" id="formWeight" placeholder="0.00" min="0" step="0.01">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="formNotes">Notes</label>
+            <textarea class="form-control" id="formNotes" placeholder="Additional notes about this shipment..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+        <button class="btn btn-primary" id="modalSave">Save Shipment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+      <h3>Delete Shipment</h3>
+      <p>Are you sure you want to delete this shipment? This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn btn-secondary" id="confirmNo">Cancel</button>
+        <button class="btn btn-danger" id="confirmYes">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let allShipments = [];
+    let allSuppliers = [];
+    let allPurchaseOrders = [];
+    let deleteTargetId = null;
+
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      renderLayout('shipments');
+
+      await Promise.all([
+        loadSuppliers(),
+        loadPurchaseOrders()
+      ]);
+
+      await loadShipments();
+      setupFilters();
+      setupModal();
+      setupDeleteConfirm();
+
+      // Auto-open modal if ?action=add
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'add') {
+        openModal();
+      }
+    }
+
+    // ---- DATA LOADING ----
+
+    async function loadSuppliers() {
+      const { data, error } = await window._supabase
+        .from('suppliers')
+        .select('id, company_name')
+        .eq('user_id', currentUser.id)
+        .order('company_name');
+
+      if (!error && data) {
+        allSuppliers = data;
+        const filterSelect = document.getElementById('supplierFilter');
+        const formSelect = document.getElementById('formSupplier');
+
+        data.forEach(s => {
+          const opt1 = document.createElement('option');
+          opt1.value = s.id;
+          opt1.textContent = s.company_name;
+          filterSelect.appendChild(opt1);
+
+          const opt2 = document.createElement('option');
+          opt2.value = s.id;
+          opt2.textContent = s.company_name;
+          formSelect.appendChild(opt2);
+        });
+      }
+    }
+
+    async function loadPurchaseOrders() {
+      const { data, error } = await window._supabase
+        .from('purchase_orders')
+        .select('id, po_number, supplier_id')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        allPurchaseOrders = data;
+        const poSelect = document.getElementById('formPO');
+
+        data.forEach(po => {
+          const opt = document.createElement('option');
+          opt.value = po.id;
+          opt.textContent = po.po_number;
+          opt.dataset.supplierId = po.supplier_id || '';
+          poSelect.appendChild(opt);
+        });
+      }
+    }
+
+    async function loadShipments() {
+      const { data, error } = await window._supabase
+        .from('shipments')
+        .select('*, suppliers(id, company_name)')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        showToast('Failed to load shipments', 'error');
+        document.getElementById('shipmentsBody').innerHTML =
+          '<tr><td colspan="9" class="empty-state"><p>Error loading shipments</p></td></tr>';
+        return;
+      }
+
+      allShipments = data || [];
+      updateStats();
+      renderTable(allShipments);
+    }
+
+    // ---- STATS ----
+
+    function updateStats() {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const inTransitCount = allShipments.filter(s =>
+        (s.status || '').toLowerCase() === 'in transit'
+      ).length;
+
+      const customsCount = allShipments.filter(s =>
+        (s.status || '').toLowerCase() === 'customs'
+      ).length;
+
+      const deliveredRecent = allShipments.filter(s => {
+        if ((s.status || '').toLowerCase() !== 'delivered') return false;
+        if (!s.actual_arrival) return false;
+        return new Date(s.actual_arrival) >= thirtyDaysAgo;
+      }).length;
+
+      const deliveredWithDates = allShipments.filter(s =>
+        (s.status || '').toLowerCase() === 'delivered' && s.ship_date && s.estimated_arrival
+      );
+
+      let avgTransit = 0;
+      if (deliveredWithDates.length > 0) {
+        const totalDays = deliveredWithDates.reduce((sum, s) => {
+          return sum + Math.abs(daysBetween(s.ship_date, s.estimated_arrival));
+        }, 0);
+        avgTransit = Math.round(totalDays / deliveredWithDates.length);
+      }
+
+      document.getElementById('statInTransit').textContent = inTransitCount;
+      document.getElementById('statCustoms').textContent = customsCount;
+      document.getElementById('statDelivered').textContent = deliveredRecent;
+      document.getElementById('statAvgTransit').textContent = avgTransit > 0 ? avgTransit : '--';
+    }
+
+    // ---- RENDER TABLE ----
+
+    function renderTable(shipments) {
+      const tbody = document.getElementById('shipmentsBody');
+
+      if (!shipments || shipments.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="empty-state">
+              <p>No shipments found</p>
+              <small>Click "+ Add Shipment" to create your first shipment</small>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      const now = new Date();
+
+      tbody.innerHTML = shipments.map(s => {
+        const supplierName = s.suppliers ? escapeHtml(s.suppliers.company_name) : '--';
+        const origin = escapeHtml(s.origin_country || '--');
+        const destination = escapeHtml(s.destination_country || '--');
+        const shipDate = formatDate(s.ship_date);
+        const eta = formatDate(s.estimated_arrival);
+
+        // Calculate days in transit
+        let daysInTransit = '--';
+        let daysClass = '';
+        if (s.ship_date) {
+          const shipDt = new Date(s.ship_date);
+          const statusLower = (s.status || '').toLowerCase();
+          if (statusLower === 'delivered' && s.actual_arrival) {
+            daysInTransit = Math.abs(daysBetween(s.ship_date, s.actual_arrival));
+          } else if (statusLower !== 'delivered') {
+            daysInTransit = Math.max(0, daysBetween(s.ship_date, now.toISOString().split('T')[0]));
+          } else {
+            daysInTransit = Math.max(0, daysBetween(s.ship_date, now.toISOString().split('T')[0]));
+          }
+
+          // Color based on if overdue
+          if (s.estimated_arrival && typeof daysInTransit === 'number') {
+            const expectedDays = Math.abs(daysBetween(s.ship_date, s.estimated_arrival));
+            if (daysInTransit > expectedDays + 7) {
+              daysClass = 'danger';
+            } else if (daysInTransit > expectedDays) {
+              daysClass = 'warning';
+            }
+          }
+        }
+
+        const carrier = escapeHtml(s.carrier || '--');
+
+        return `
+          <tr>
+            <td>
+              <a href="/shipment-detail.html?id=${s.id}" class="tracking-link cell-primary">${escapeHtml(s.tracking_number || 'N/A')}</a>
+            </td>
+            <td>${supplierName}</td>
+            <td>${origin} <span class="route-arrow">&rarr;</span> ${destination}</td>
+            <td>${shipDate}</td>
+            <td>${eta}</td>
+            <td><span class="days-transit ${daysClass}">${daysInTransit}</span></td>
+            <td>${statusBadge(s.status)}</td>
+            <td>${carrier}</td>
+            <td>
+              <div class="actions-cell">
+                <a href="/shipment-detail.html?id=${s.id}" class="btn btn-secondary btn-sm">View</a>
+                <button class="btn btn-danger btn-sm" onclick="confirmDelete('${s.id}')">Delete</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    // ---- FILTERS ----
+
+    function setupFilters() {
+      const searchInput = document.getElementById('searchInput');
+      const statusFilter = document.getElementById('statusFilter');
+      const supplierFilter = document.getElementById('supplierFilter');
+      const dateFrom = document.getElementById('dateFrom');
+      const dateTo = document.getElementById('dateTo');
+
+      const applyFilters = () => {
+        const query = searchInput.value.trim().toLowerCase();
+        const statusVal = statusFilter.value.toLowerCase();
+        const supplierVal = supplierFilter.value;
+        const fromVal = dateFrom.value;
+        const toVal = dateTo.value;
+
+        let filtered = allShipments.filter(s => {
+          // Search by tracking number
+          if (query) {
+            const tracking = (s.tracking_number || '').toLowerCase();
+            if (!tracking.includes(query)) return false;
+          }
+
+          // Status filter
+          if (statusVal) {
+            if ((s.status || '').toLowerCase() !== statusVal) return false;
+          }
+
+          // Supplier filter
+          if (supplierVal) {
+            if (s.supplier_id !== supplierVal) return false;
+          }
+
+          // Date range filter on ship_date
+          if (fromVal && s.ship_date) {
+            if (s.ship_date < fromVal) return false;
+          }
+          if (fromVal && !s.ship_date) return false;
+
+          if (toVal && s.ship_date) {
+            if (s.ship_date > toVal) return false;
+          }
+          if (toVal && !s.ship_date) return false;
+
+          return true;
+        });
+
+        renderTable(filtered);
+      };
+
+      searchInput.addEventListener('input', applyFilters);
+      statusFilter.addEventListener('change', applyFilters);
+      supplierFilter.addEventListener('change', applyFilters);
+      dateFrom.addEventListener('change', applyFilters);
+      dateTo.addEventListener('change', applyFilters);
+    }
+
+    // ---- MODAL ----
+
+    function setupModal() {
+      const modal = document.getElementById('shipmentModal');
+      const addBtn = document.getElementById('addShipmentBtn');
+      const closeBtn = document.getElementById('modalClose');
+      const cancelBtn = document.getElementById('modalCancel');
+      const saveBtn = document.getElementById('modalSave');
+      const poSelect = document.getElementById('formPO');
+
+      addBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      // Auto-fill supplier when PO is selected
+      poSelect.addEventListener('change', () => {
+        const selectedOption = poSelect.options[poSelect.selectedIndex];
+        const supplierId = selectedOption.dataset.supplierId;
+        if (supplierId) {
+          document.getElementById('formSupplier').value = supplierId;
+        }
+      });
+
+      saveBtn.addEventListener('click', saveShipment);
+    }
+
+    function openModal() {
+      document.getElementById('shipmentForm').reset();
+      document.getElementById('shipmentModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('shipmentModal').classList.remove('show');
+    }
+
+    async function saveShipment() {
+      const supplierId = document.getElementById('formSupplier').value;
+      const tracking = document.getElementById('formTracking').value.trim();
+      const carrier = document.getElementById('formCarrier').value;
+      const shipDate = document.getElementById('formShipDate').value;
+      const eta = document.getElementById('formETA').value;
+
+      if (!supplierId || !tracking || !carrier || !shipDate || !eta) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+      }
+
+      const poId = document.getElementById('formPO').value || null;
+      const method = document.getElementById('formMethod').value || null;
+      const packages = document.getElementById('formPackages').value ? parseInt(document.getElementById('formPackages').value) : null;
+      const weight = document.getElementById('formWeight').value ? parseFloat(document.getElementById('formWeight').value) : null;
+      const notes = document.getElementById('formNotes').value.trim() || null;
+
+      const shipmentData = {
+        user_id: currentUser.id,
+        supplier_id: supplierId,
+        po_id: poId,
+        tracking_number: tracking,
+        carrier: carrier,
+        ship_date: shipDate,
+        estimated_arrival: eta,
+        shipping_method: method,
+        num_packages: packages,
+        weight_kg: weight,
+        notes: notes,
+        status: 'processing'
+      };
+
+      const saveBtn = document.getElementById('modalSave');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      const { data, error } = await window._supabase
+        .from('shipments')
+        .insert([shipmentData])
+        .select('*, suppliers(id, company_name)');
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Shipment';
+
+      if (error) {
+        showToast('Failed to create shipment: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('Shipment created successfully', 'success');
+      closeModal();
+      await loadShipments();
+    }
+
+    // ---- DELETE ----
+
+    function setupDeleteConfirm() {
+      document.getElementById('confirmNo').addEventListener('click', () => {
+        document.getElementById('confirmOverlay').classList.remove('show');
+        deleteTargetId = null;
+      });
+
+      document.getElementById('confirmYes').addEventListener('click', async () => {
+        if (!deleteTargetId) return;
+
+        const btn = document.getElementById('confirmYes');
+        btn.disabled = true;
+        btn.textContent = 'Deleting...';
+
+        const { error } = await window._supabase
+          .from('shipments')
+          .delete()
+          .eq('id', deleteTargetId)
+          .eq('user_id', currentUser.id);
+
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+        document.getElementById('confirmOverlay').classList.remove('show');
+
+        if (error) {
+          showToast('Failed to delete shipment: ' + error.message, 'error');
+        } else {
+          showToast('Shipment deleted', 'success');
+          await loadShipments();
+        }
+
+        deleteTargetId = null;
+      });
+
+      document.getElementById('confirmOverlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('confirmOverlay')) {
+          document.getElementById('confirmOverlay').classList.remove('show');
+          deleteTargetId = null;
+        }
+      });
+    }
+
+    function confirmDelete(id) {
+      deleteTargetId = id;
+      document.getElementById('confirmOverlay').classList.add('show');
+    }
+
+    // ---- INIT ----
+    init();
+  </script>
+</body>
+</html>

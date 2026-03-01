@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Settings</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/layout.js"></script>
+  <style>
+    .settings-section {
+      max-width: 720px;
+    }
+
+    .integration-card h4 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .integration-card h4 svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .integration-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .75rem;
+      font-weight: 600;
+      margin-left: auto;
+    }
+
+    .integration-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .integration-status .dot.green { background: var(--primary); }
+    .integration-status .dot.gray { background: var(--text-dim); }
+
+    .integration-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .integration-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .integration-card.dimmed {
+      opacity: .5;
+      pointer-events: none;
+      position: relative;
+    }
+
+    .integration-card.dimmed h4 {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .lock-icon {
+      color: var(--text-dim);
+    }
+
+    .coming-soon-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: .7rem;
+      font-weight: 600;
+      background: rgba(59,130,246,.15);
+      color: var(--blue);
+      border: 1px solid rgba(59,130,246,.3);
+      margin-left: 8px;
+    }
+
+    .toggles-section {
+      padding: 4px 0;
+    }
+
+    .toggle-wrap .toggle-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toggle-wrap .toggle-info .toggle-label {
+      font-size: .85rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .alert-email-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .team-empty {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-dim);
+    }
+
+    .team-empty svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 14px;
+      color: var(--text-dim);
+    }
+
+    .team-empty p {
+      font-size: .9rem;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+
+    .team-empty small {
+      font-size: .8rem;
+    }
+
+    .team-info-banner {
+      display: none;
+      background: rgba(59,130,246,.1);
+      border: 1px solid rgba(59,130,246,.25);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      color: var(--blue);
+      font-size: .85rem;
+      font-weight: 500;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .team-info-banner.show {
+      display: flex;
+    }
+
+    .team-info-banner svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .save-row {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main" id="mainContent">
+    <div class="loading" id="loadingState">
+      <div class="spinner"></div>
+      Loading settings...
+    </div>
+
+    <div id="settingsContent" style="display:none">
+      <div class="page-header">
+        <h2>Settings</h2>
+      </div>
+
+      <!-- TABS -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="general">General</button>
+        <button class="tab-btn" data-tab="integrations">Integrations</button>
+        <button class="tab-btn" data-tab="notifications">Notifications</button>
+        <button class="tab-btn" data-tab="team">Team</button>
+      </div>
+
+      <!-- TAB: GENERAL -->
+      <div class="tab-content active" id="tab-general">
+        <div class="settings-section">
+          <div class="section">
+            <div class="section-header">
+              <h3>Company Settings</h3>
+            </div>
+            <div style="padding: 22px;">
+              <div class="form-group">
+                <label for="companyName">Company Name</label>
+                <input type="text" class="form-control" id="companyName" placeholder="e.g. Acme Supply Co.">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="timezone">Timezone</label>
+                  <select class="form-control" id="timezone">
+                    <option value="America/New_York">America/New_York</option>
+                    <option value="America/Chicago">America/Chicago</option>
+                    <option value="America/Denver">America/Denver</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="currency">Currency</label>
+                  <select class="form-control" id="currency">
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="CNY">CNY</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="fiscalYearStart">Fiscal Year Start</label>
+                  <select class="form-control" id="fiscalYearStart">
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="defaultShipping">Default Shipping Method</label>
+                  <select class="form-control" id="defaultShipping">
+                    <option value="Sea Freight">Sea Freight</option>
+                    <option value="Air Freight">Air Freight</option>
+                    <option value="Express">Express</option>
+                    <option value="Rail">Rail</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="save-row">
+                <button class="btn btn-primary" id="saveGeneralBtn">Save Settings</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: INTEGRATIONS -->
+      <div class="tab-content" id="tab-integrations">
+        <div class="settings-section">
+
+          <!-- Shopify -->
+          <div class="integration-card" id="card-shopify">
+            <div class="integration-header">
+              <h4>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Shopify
+              </h4>
+              <div class="integration-status" id="shopify-status">
+                <span class="dot gray"></span>
+                <span>Not configured</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="shopifyStoreUrl">Store URL</label>
+              <input type="text" class="form-control" id="shopifyStoreUrl" placeholder="mystore.myshopify.com">
+            </div>
+            <div class="form-group">
+              <label for="shopifyApiKey">API Key</label>
+              <input type="password" class="form-control" id="shopifyApiKey" placeholder="Enter your Shopify API key">
+            </div>
+            <div class="integration-actions">
+              <button class="btn btn-secondary btn-sm" onclick="testConnection('shopify')">Test Connection</button>
+              <button class="btn btn-primary btn-sm" onclick="saveIntegration('shopify')">Save</button>
+            </div>
+          </div>
+
+          <!-- WooCommerce -->
+          <div class="integration-card" id="card-woocommerce">
+            <div class="integration-header">
+              <h4>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+                WooCommerce
+              </h4>
+              <div class="integration-status" id="woocommerce-status">
+                <span class="dot gray"></span>
+                <span>Not configured</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="wooStoreUrl">Store URL</label>
+              <input type="text" class="form-control" id="wooStoreUrl" placeholder="https://mystore.com">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="wooConsumerKey">Consumer Key</label>
+                <input type="text" class="form-control" id="wooConsumerKey" placeholder="ck_...">
+              </div>
+              <div class="form-group">
+                <label for="wooConsumerSecret">Consumer Secret</label>
+                <input type="password" class="form-control" id="wooConsumerSecret" placeholder="cs_...">
+              </div>
+            </div>
+            <div class="integration-actions">
+              <button class="btn btn-secondary btn-sm" onclick="testConnection('woocommerce')">Test Connection</button>
+              <button class="btn btn-primary btn-sm" onclick="saveIntegration('woocommerce')">Save</button>
+            </div>
+          </div>
+
+          <!-- 17Track -->
+          <div class="integration-card" id="card-17track">
+            <div class="integration-header">
+              <h4>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                17Track
+              </h4>
+              <div class="integration-status" id="17track-status">
+                <span class="dot gray"></span>
+                <span>Not configured</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="trackApiKey">API Key</label>
+              <input type="text" class="form-control" id="trackApiKey" placeholder="Enter your 17Track API key">
+            </div>
+            <div class="integration-actions">
+              <button class="btn btn-secondary btn-sm" onclick="testConnection('17track')">Test Connection</button>
+              <button class="btn btn-primary btn-sm" onclick="saveIntegration('17track')">Save</button>
+            </div>
+          </div>
+
+          <!-- Stripe (Coming Soon) -->
+          <div class="integration-card dimmed" id="card-stripe">
+            <div class="integration-header" style="pointer-events:auto;opacity:1;">
+              <h4>
+                <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                Stripe
+                <span class="coming-soon-badge">Coming Soon</span>
+              </h4>
+            </div>
+            <div class="form-group">
+              <label>API Key</label>
+              <input type="password" class="form-control" disabled placeholder="Available in a future update">
+            </div>
+            <div class="integration-actions">
+              <button class="btn btn-secondary btn-sm" disabled>Test Connection</button>
+              <button class="btn btn-primary btn-sm" disabled>Save</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TAB: NOTIFICATIONS -->
+      <div class="tab-content" id="tab-notifications">
+        <div class="settings-section">
+          <div class="section">
+            <div class="section-header">
+              <h3>Notification Preferences</h3>
+            </div>
+            <div style="padding: 22px;">
+              <div class="toggles-section">
+
+                <div class="toggle-wrap">
+                  <div class="toggle-info">
+                    <div class="toggle-label">Low Stock Alerts</div>
+                    <div class="toggle-desc">Get notified when products reach reorder point</div>
+                  </div>
+                  <div class="toggle-switch" id="toggle-low-stock" data-key="notify_low_stock"></div>
+                </div>
+
+                <div class="toggle-wrap">
+                  <div class="toggle-info">
+                    <div class="toggle-label">Shipment Status Updates</div>
+                    <div class="toggle-desc">Receive updates when shipment status changes</div>
+                  </div>
+                  <div class="toggle-switch" id="toggle-shipment-status" data-key="notify_shipment_updates"></div>
+                </div>
+
+                <div class="toggle-wrap">
+                  <div class="toggle-info">
+                    <div class="toggle-label">PO Confirmation Required</div>
+                    <div class="toggle-desc">Alert when POs need supplier confirmation</div>
+                  </div>
+                  <div class="toggle-switch" id="toggle-po-confirmation" data-key="notify_po_confirmation"></div>
+                </div>
+
+                <div class="toggle-wrap">
+                  <div class="toggle-info">
+                    <div class="toggle-label">Customs Delay Alerts</div>
+                    <div class="toggle-desc">Get notified about customs holds or delays</div>
+                  </div>
+                  <div class="toggle-switch" id="toggle-customs-delay" data-key="notify_customs_delays"></div>
+                </div>
+
+              </div>
+
+              <div class="alert-email-section">
+                <div class="form-group">
+                  <label for="alertEmail">Alert Email Address</label>
+                  <input type="email" class="form-control" id="alertEmail" placeholder="alerts@yourcompany.com">
+                </div>
+              </div>
+
+              <div class="save-row">
+                <button class="btn btn-primary" id="saveNotificationsBtn">Save Notification Settings</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: TEAM -->
+      <div class="tab-content" id="tab-team">
+        <div class="settings-section">
+          <div class="section">
+            <div class="section-header">
+              <h3>Team Members</h3>
+              <button class="btn btn-primary btn-sm" id="inviteMemberBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Invite Member
+              </button>
+            </div>
+            <div>
+              <div class="team-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+                <p>No team members yet</p>
+                <small>Invite members to collaborate on supply chain management</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="team-info-banner" id="teamInfoBanner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <span>Team management coming soon! This feature will be available in a future update.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let userSettings = null;
+    let settingsId = null;
+
+    // ---- INITIALIZATION ----
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      renderLayout('settings');
+
+      // Bind tab switching
+      document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          switchTab(this.getAttribute('data-tab'));
+        });
+      });
+
+      // Bind toggle switches
+      document.querySelectorAll('.toggle-switch').forEach(function(toggle) {
+        toggle.addEventListener('click', function() {
+          this.classList.toggle('on');
+        });
+      });
+
+      // Bind save buttons
+      document.getElementById('saveGeneralBtn').addEventListener('click', saveGeneralSettings);
+      document.getElementById('saveNotificationsBtn').addEventListener('click', saveNotificationSettings);
+
+      // Bind invite member button
+      document.getElementById('inviteMemberBtn').addEventListener('click', function() {
+        var banner = document.getElementById('teamInfoBanner');
+        banner.classList.toggle('show');
+      });
+
+      // Load existing settings
+      await loadSettings();
+
+      // Show content
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('settingsContent').style.display = 'block';
+    }
+
+    // ---- TAB SWITCHING ----
+    function switchTab(tabId) {
+      // Update tab buttons
+      document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-tab') === tabId) {
+          btn.classList.add('active');
+        }
+      });
+
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(function(content) {
+        content.classList.remove('active');
+      });
+      var target = document.getElementById('tab-' + tabId);
+      if (target) {
+        target.classList.add('active');
+      }
+    }
+
+    // ---- LOAD SETTINGS ----
+    async function loadSettings() {
+      var sb = window._supabase;
+
+      var { data, error } = await sb
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading settings:', error.message);
+        return;
+      }
+
+      if (data) {
+        userSettings = data;
+        settingsId = data.id;
+        populateFields(data);
+      }
+    }
+
+    // ---- POPULATE FIELDS ----
+    function populateFields(s) {
+      // General tab
+      if (s.company_name) document.getElementById('companyName').value = s.company_name;
+      if (s.timezone) document.getElementById('timezone').value = s.timezone;
+      if (s.currency) document.getElementById('currency').value = s.currency;
+      if (s.fiscal_year_start) document.getElementById('fiscalYearStart').value = s.fiscal_year_start;
+      if (s.default_shipping_method) document.getElementById('defaultShipping').value = s.default_shipping_method;
+
+      // Integrations tab
+      if (s.shopify_store_url) document.getElementById('shopifyStoreUrl').value = s.shopify_store_url;
+      if (s.shopify_api_key) document.getElementById('shopifyApiKey').value = s.shopify_api_key;
+      if (s.woo_url) document.getElementById('wooStoreUrl').value = s.woo_url;
+      if (s.woo_consumer_key) document.getElementById('wooConsumerKey').value = s.woo_consumer_key;
+      if (s.woo_consumer_secret) document.getElementById('wooConsumerSecret').value = s.woo_consumer_secret;
+      if (s.track17_api_key) document.getElementById('trackApiKey').value = s.track17_api_key;
+
+      // Update integration statuses
+      updateIntegrationStatus('shopify', s.shopify_store_url && s.shopify_api_key);
+      updateIntegrationStatus('woocommerce', s.woo_url && s.woo_consumer_key && s.woo_consumer_secret);
+      updateIntegrationStatus('17track', s.track17_api_key);
+
+      // Notifications tab
+      if (s.notify_low_stock) document.getElementById('toggle-low-stock').classList.add('on');
+      if (s.notify_shipment_updates) document.getElementById('toggle-shipment-status').classList.add('on');
+      if (s.notify_po_confirmation) document.getElementById('toggle-po-confirmation').classList.add('on');
+      if (s.notify_customs_delays) document.getElementById('toggle-customs-delay').classList.add('on');
+      if (s.alert_email) document.getElementById('alertEmail').value = s.alert_email;
+    }
+
+    // ---- UPDATE INTEGRATION STATUS INDICATOR ----
+    function updateIntegrationStatus(name, isConfigured) {
+      var el = document.getElementById(name + '-status');
+      if (!el) return;
+
+      if (isConfigured) {
+        el.innerHTML = '<span class="dot green"></span><span>Connected</span>';
+      } else {
+        el.innerHTML = '<span class="dot gray"></span><span>Not configured</span>';
+      }
+    }
+
+    // ---- SAVE GENERAL SETTINGS ----
+    async function saveGeneralSettings() {
+      var btn = document.getElementById('saveGeneralBtn');
+      var originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      var payload = {
+        user_id: currentUser.id,
+        company_name: document.getElementById('companyName').value.trim() || null,
+        timezone: document.getElementById('timezone').value,
+        currency: document.getElementById('currency').value,
+        fiscal_year_start: document.getElementById('fiscalYearStart').value,
+        default_shipping_method: document.getElementById('defaultShipping').value
+      };
+
+      var result = await upsertSettings(payload);
+
+      btn.disabled = false;
+      btn.textContent = originalText;
+
+      if (result.error) {
+        showToast('Error saving settings: ' + result.error.message, 'error');
+        return;
+      }
+
+      showToast('Settings saved successfully', 'success');
+    }
+
+    // ---- SAVE INTEGRATION ----
+    async function saveIntegration(name) {
+      var payload = { user_id: currentUser.id };
+
+      if (name === 'shopify') {
+        payload.shopify_store_url = document.getElementById('shopifyStoreUrl').value.trim() || null;
+        payload.shopify_api_key = document.getElementById('shopifyApiKey').value.trim() || null;
+      } else if (name === 'woocommerce') {
+        payload.woo_url = document.getElementById('wooStoreUrl').value.trim() || null;
+        payload.woo_consumer_key = document.getElementById('wooConsumerKey').value.trim() || null;
+        payload.woo_consumer_secret = document.getElementById('wooConsumerSecret').value.trim() || null;
+      } else if (name === '17track') {
+        payload.track17_api_key = document.getElementById('trackApiKey').value.trim() || null;
+      }
+
+      var result = await upsertSettings(payload);
+
+      if (result.error) {
+        showToast('Error saving integration: ' + result.error.message, 'error');
+        return;
+      }
+
+      // Update status indicator
+      if (name === 'shopify') {
+        updateIntegrationStatus('shopify', payload.shopify_store_url && payload.shopify_api_key);
+      } else if (name === 'woocommerce') {
+        updateIntegrationStatus('woocommerce', payload.woo_url && payload.woo_consumer_key && payload.woo_consumer_secret);
+      } else if (name === '17track') {
+        updateIntegrationStatus('17track', payload.track17_api_key);
+      }
+
+      showToast(name.charAt(0).toUpperCase() + name.slice(1) + ' integration saved', 'success');
+    }
+
+    // ---- TEST CONNECTION ----
+    function testConnection(name) {
+      showToast('Connection test coming soon', 'success');
+    }
+
+    // ---- SAVE NOTIFICATION SETTINGS ----
+    async function saveNotificationSettings() {
+      var btn = document.getElementById('saveNotificationsBtn');
+      var originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      var payload = {
+        user_id: currentUser.id,
+        notify_low_stock: document.getElementById('toggle-low-stock').classList.contains('on'),
+        notify_shipment_updates: document.getElementById('toggle-shipment-status').classList.contains('on'),
+        notify_po_confirmation: document.getElementById('toggle-po-confirmation').classList.contains('on'),
+        notify_customs_delays: document.getElementById('toggle-customs-delay').classList.contains('on'),
+        alert_email: document.getElementById('alertEmail').value.trim() || null
+      };
+
+      var result = await upsertSettings(payload);
+
+      btn.disabled = false;
+      btn.textContent = originalText;
+
+      if (result.error) {
+        showToast('Error saving notification settings: ' + result.error.message, 'error');
+        return;
+      }
+
+      showToast('Notification settings saved', 'success');
+    }
+
+    // ---- UPSERT SETTINGS ----
+    async function upsertSettings(payload) {
+      var sb = window._supabase;
+
+      if (settingsId) {
+        // Update existing record
+        var result = await sb
+          .from('user_settings')
+          .update(payload)
+          .eq('id', settingsId)
+          .eq('user_id', currentUser.id)
+          .select()
+          .single();
+
+        if (result.data) {
+          userSettings = result.data;
+        }
+        return result;
+      } else {
+        // Insert new record
+        var result = await sb
+          .from('user_settings')
+          .insert(payload)
+          .select()
+          .single();
+
+        if (result.data) {
+          userSettings = result.data;
+          settingsId = result.data.id;
+        }
+        return result;
+      }
+    }
+
+    // ---- START ----
+    init();
+  </script>
+</body>
+</html>

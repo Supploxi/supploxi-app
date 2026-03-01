@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Suppliers</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/layout.js"></script>
+</head>
+<body>
+
+  <!-- Main Content Area -->
+  <div class="main" id="mainContent" style="display:none">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h2>Suppliers</h2>
+      <button class="btn btn-primary" id="addSupplierBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Supplier
+      </button>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="filters-bar">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search suppliers...">
+      <select class="filter-select" id="statusFilter">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+        <option value="on hold">On Hold</option>
+      </select>
+      <select class="filter-select" id="countryFilter">
+        <option value="">All Countries</option>
+        <option value="China">China</option>
+        <option value="India">India</option>
+        <option value="Vietnam">Vietnam</option>
+        <option value="Bangladesh">Bangladesh</option>
+        <option value="Turkey">Turkey</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <!-- Suppliers Table Section -->
+    <div class="section">
+      <div id="suppliersTableWrap">
+        <div class="loading" id="loadingState">
+          <div class="spinner"></div>
+          Loading suppliers...
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Add/Edit Supplier Modal -->
+  <div class="modal-overlay" id="supplierModal">
+    <div class="modal" style="max-width:620px">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Supplier</h3>
+        <button class="modal-close" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="supplierForm" autocomplete="off">
+          <input type="hidden" id="supplierId" value="">
+
+          <div class="form-group">
+            <label for="companyName">Company Name *</label>
+            <input type="text" class="form-control" id="companyName" placeholder="e.g. Shenzhen Electronics Co." required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="contactName">Contact Name</label>
+              <input type="text" class="form-control" id="contactName" placeholder="e.g. Zhang Wei">
+            </div>
+            <div class="form-group">
+              <label for="contactEmail">Email</label>
+              <input type="email" class="form-control" id="contactEmail" placeholder="e.g. contact@supplier.com">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="contactPhone">Phone (WhatsApp preferred)</label>
+              <input type="text" class="form-control" id="contactPhone" placeholder="e.g. +86 138 0000 0000">
+            </div>
+            <div class="form-group">
+              <label for="supplierCountry">Country</label>
+              <select class="form-control" id="supplierCountry">
+                <option value="">Select country</option>
+                <option value="China">China</option>
+                <option value="India">India</option>
+                <option value="Vietnam">Vietnam</option>
+                <option value="Bangladesh">Bangladesh</option>
+                <option value="Turkey">Turkey</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="supplierCity">City</label>
+              <input type="text" class="form-control" id="supplierCity" placeholder="e.g. Shenzhen">
+            </div>
+            <div class="form-group">
+              <label for="supplierCategory">Category</label>
+              <select class="form-control" id="supplierCategory">
+                <option value="">Select category</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Apparel">Apparel</option>
+                <option value="Home & Garden">Home & Garden</option>
+                <option value="Sports">Sports</option>
+                <option value="Beauty">Beauty</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="paymentTerms">Payment Terms</label>
+              <select class="form-control" id="paymentTerms">
+                <option value="">Select terms</option>
+                <option value="Net 30">Net 30</option>
+                <option value="Net 60">Net 60</option>
+                <option value="Prepaid">Prepaid</option>
+                <option value="50/50">50/50</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="leadTime">Lead Time (days)</label>
+              <input type="number" class="form-control" id="leadTime" placeholder="e.g. 30" min="0">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="moq">Minimum Order Quantity</label>
+              <input type="number" class="form-control" id="moq" placeholder="e.g. 500" min="0">
+            </div>
+            <div class="form-group">
+              <label for="supplierCurrency">Currency</label>
+              <select class="form-control" id="supplierCurrency">
+                <option value="USD">USD</option>
+                <option value="CNY">CNY</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="supplierNotes">Notes</label>
+            <textarea class="form-control" id="supplierNotes" placeholder="Additional notes about this supplier..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="modalSaveBtn">Save Supplier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-header">
+        <h3>Delete Supplier</h3>
+        <button class="modal-close" id="deleteModalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-muted);font-size:.9rem;">Are you sure you want to delete <strong id="deleteSupplierName" style="color:var(--text)"></strong>? This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="deleteCancelBtn">Cancel</button>
+        <button class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allSuppliers = [];
+    let currentUser = null;
+    let editingSupplierId = null;
+    let deletingSupplierId = null;
+
+    // ---- INITIALIZATION ----
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      renderLayout('suppliers');
+      document.getElementById('mainContent').style.display = 'block';
+
+      bindEvents();
+      await loadSuppliers();
+
+      // Auto-open modal if ?action=add or ?action=edit&id=...
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'add') {
+        openAddModal();
+      } else if (params.get('action') === 'edit' && params.get('id')) {
+        openEditModal(params.get('id'));
+      }
+    }
+
+    // ---- EVENT BINDING ----
+    function bindEvents() {
+      // Add supplier button
+      document.getElementById('addSupplierBtn').addEventListener('click', openAddModal);
+
+      // Modal close/cancel
+      document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+      document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+      document.getElementById('supplierModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+      });
+
+      // Modal save
+      document.getElementById('modalSaveBtn').addEventListener('click', saveSupplier);
+
+      // Delete modal close/cancel
+      document.getElementById('deleteModalCloseBtn').addEventListener('click', closeDeleteModal);
+      document.getElementById('deleteCancelBtn').addEventListener('click', closeDeleteModal);
+      document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDeleteModal();
+      });
+
+      // Delete confirm
+      document.getElementById('deleteConfirmBtn').addEventListener('click', confirmDelete);
+
+      // Filters
+      document.getElementById('searchInput').addEventListener('input', applyFilters);
+      document.getElementById('statusFilter').addEventListener('change', applyFilters);
+      document.getElementById('countryFilter').addEventListener('change', applyFilters);
+
+      // Keyboard shortcut to close modals
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeModal();
+          closeDeleteModal();
+        }
+      });
+    }
+
+    // ---- LOAD SUPPLIERS ----
+    async function loadSuppliers() {
+      document.getElementById('suppliersTableWrap').innerHTML = '<div class="loading"><div class="spinner"></div>Loading suppliers...</div>';
+
+      const { data, error } = await window._supabase
+        .from('suppliers')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        showToast('Failed to load suppliers: ' + error.message, 'error');
+        document.getElementById('suppliersTableWrap').innerHTML = '<div class="empty-state"><p>Error loading suppliers</p><small>Please try refreshing the page</small></div>';
+        return;
+      }
+
+      allSuppliers = data || [];
+      applyFilters();
+    }
+
+    // ---- RENDER TABLE ----
+    function renderTable(suppliers) {
+      const wrap = document.getElementById('suppliersTableWrap');
+
+      if (suppliers.length === 0) {
+        const hasFilters = document.getElementById('searchInput').value ||
+                           document.getElementById('statusFilter').value ||
+                           document.getElementById('countryFilter').value;
+        if (hasFilters) {
+          wrap.innerHTML = '<div class="empty-state"><p>No suppliers match your filters</p><small>Try adjusting your search or filter criteria</small></div>';
+        } else {
+          wrap.innerHTML = '<div class="empty-state"><p>No suppliers yet</p><small>Click "Add Supplier" to get started</small></div>';
+        }
+        return;
+      }
+
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>Supplier Name</th>
+            <th>Country</th>
+            <th>Category</th>
+            <th>Lead Time</th>
+            <th>On-Time Rate</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      suppliers.forEach(function(s) {
+        const initials = getInitials(s.company_name || '');
+        const avatarColor = nameToHslColor(s.company_name || '');
+        const country = escapeHtml(s.country || '');
+        const flag = countryFlag(s.country || '');
+        const category = escapeHtml(s.category || '—');
+        const leadTime = s.lead_time_days != null ? s.lead_time_days + ' days' : '—';
+        const onTimeRate = s.on_time_rate != null ? s.on_time_rate : null;
+        const score = s.score != null ? s.score : null;
+        const status = s.status || 'active';
+
+        // On-time rate rendering
+        let onTimeHtml = '—';
+        if (onTimeRate !== null) {
+          let barColor;
+          if (onTimeRate > 90) barColor = 'var(--primary)';
+          else if (onTimeRate >= 70) barColor = 'var(--warning)';
+          else barColor = 'var(--danger)';
+          onTimeHtml = '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + onTimeRate + '%;background:' + barColor + '"></div></div>' + onTimeRate + '%';
+        }
+
+        // Score badge rendering
+        let scoreHtml = '—';
+        if (score !== null) {
+          let scoreBg, scoreColor;
+          if (score >= 80) {
+            scoreBg = 'rgba(0,212,170,.15)';
+            scoreColor = 'var(--primary)';
+          } else if (score >= 60) {
+            scoreBg = 'rgba(245,158,11,.15)';
+            scoreColor = 'var(--warning)';
+          } else {
+            scoreBg = 'rgba(255,71,87,.15)';
+            scoreColor = 'var(--danger)';
+          }
+          scoreHtml = '<span class="score-badge" style="background:' + scoreBg + ';color:' + scoreColor + '">' + score + '</span>';
+        }
+
+        html += '<tr>' +
+          '<td><div class="supplier-cell"><div class="supplier-avatar" style="background:' + avatarColor + ';color:#fff">' + escapeHtml(initials) + '</div><span class="cell-primary">' + escapeHtml(s.company_name || '') + '</span></div></td>' +
+          '<td>' + flag + ' ' + country + '</td>' +
+          '<td>' + category + '</td>' +
+          '<td>' + leadTime + '</td>' +
+          '<td>' + onTimeHtml + '</td>' +
+          '<td>' + scoreHtml + '</td>' +
+          '<td>' + statusBadge(status) + '</td>' +
+          '<td>' +
+            '<button class="btn-icon" onclick="viewSupplier(\'' + s.id + '\')" title="View Details">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+            '</button>' +
+            '<button class="btn-icon" onclick="openEditModal(\'' + s.id + '\')" title="Edit">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+            '</button>' +
+            '<button class="btn-icon danger" onclick="openDeleteModal(\'' + s.id + '\', \'' + escapeHtml((s.company_name || '').replace(/'/g, "\\'")) + '\')" title="Delete">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>' +
+            '</button>' +
+          '</td>' +
+        '</tr>';
+      });
+
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+    }
+
+    // ---- FILTERING ----
+    function applyFilters() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+      const statusVal = document.getElementById('statusFilter').value.toLowerCase();
+      const countryVal = document.getElementById('countryFilter').value;
+
+      let filtered = allSuppliers.filter(function(s) {
+        // Search filter
+        if (searchTerm) {
+          const haystack = [
+            s.company_name || '',
+            s.contact_name || '',
+            s.email || '',
+            s.country || '',
+            s.category || '',
+            s.city || ''
+          ].join(' ').toLowerCase();
+          if (haystack.indexOf(searchTerm) === -1) return false;
+        }
+
+        // Status filter
+        if (statusVal) {
+          if ((s.status || 'active').toLowerCase() !== statusVal) return false;
+        }
+
+        // Country filter
+        if (countryVal) {
+          if (countryVal === 'Other') {
+            const mainCountries = ['China', 'India', 'Vietnam', 'Bangladesh', 'Turkey'];
+            if (mainCountries.indexOf(s.country) !== -1) return false;
+          } else {
+            if (s.country !== countryVal) return false;
+          }
+        }
+
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    // ---- MODAL OPEN/CLOSE ----
+    function openAddModal() {
+      editingSupplierId = null;
+      document.getElementById('modalTitle').textContent = 'Add Supplier';
+      document.getElementById('modalSaveBtn').textContent = 'Save Supplier';
+      resetForm();
+      document.getElementById('supplierModal').classList.add('show');
+    }
+
+    function openEditModal(id) {
+      const supplier = allSuppliers.find(function(s) { return s.id === id; });
+      if (!supplier) return;
+
+      editingSupplierId = id;
+      document.getElementById('modalTitle').textContent = 'Edit Supplier';
+      document.getElementById('modalSaveBtn').textContent = 'Update Supplier';
+
+      document.getElementById('supplierId').value = id;
+      document.getElementById('companyName').value = supplier.company_name || '';
+      document.getElementById('contactName').value = supplier.contact_name || '';
+      document.getElementById('contactEmail').value = supplier.email || '';
+      document.getElementById('contactPhone').value = supplier.phone || '';
+      document.getElementById('supplierCountry').value = supplier.country || '';
+      document.getElementById('supplierCity').value = supplier.city || '';
+      document.getElementById('supplierCategory').value = supplier.category || '';
+      document.getElementById('paymentTerms').value = supplier.payment_terms || '';
+      document.getElementById('leadTime').value = supplier.lead_time_days != null ? supplier.lead_time_days : '';
+      document.getElementById('moq').value = supplier.moq != null ? supplier.moq : '';
+      document.getElementById('supplierCurrency').value = supplier.currency || 'USD';
+      document.getElementById('supplierNotes').value = supplier.notes || '';
+
+      document.getElementById('supplierModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('supplierModal').classList.remove('show');
+      editingSupplierId = null;
+      resetForm();
+    }
+
+    function resetForm() {
+      document.getElementById('supplierForm').reset();
+      document.getElementById('supplierId').value = '';
+      document.getElementById('supplierCurrency').value = 'USD';
+    }
+
+    // ---- SAVE (CREATE/UPDATE) ----
+    async function saveSupplier() {
+      var companyName = document.getElementById('companyName').value.trim();
+      if (!companyName) {
+        showToast('Company name is required', 'error');
+        document.getElementById('companyName').focus();
+        return;
+      }
+
+      var saveBtn = document.getElementById('modalSaveBtn');
+      var originalText = saveBtn.textContent;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      var supplierData = {
+        company_name: companyName,
+        contact_name: document.getElementById('contactName').value.trim() || null,
+        email: document.getElementById('contactEmail').value.trim() || null,
+        phone: document.getElementById('contactPhone').value.trim() || null,
+        country: document.getElementById('supplierCountry').value || null,
+        city: document.getElementById('supplierCity').value.trim() || null,
+        category: document.getElementById('supplierCategory').value || null,
+        payment_terms: document.getElementById('paymentTerms').value || null,
+        lead_time_days: document.getElementById('leadTime').value ? parseInt(document.getElementById('leadTime').value) : null,
+        moq: document.getElementById('moq').value ? parseInt(document.getElementById('moq').value) : null,
+        currency: document.getElementById('supplierCurrency').value || 'USD',
+        notes: document.getElementById('supplierNotes').value.trim() || null,
+        user_id: currentUser.id
+      };
+
+      var result;
+      if (editingSupplierId) {
+        // Update
+        result = await window._supabase
+          .from('suppliers')
+          .update(supplierData)
+          .eq('id', editingSupplierId)
+          .eq('user_id', currentUser.id)
+          .select();
+      } else {
+        // Create
+        supplierData.status = 'active';
+        result = await window._supabase
+          .from('suppliers')
+          .insert(supplierData)
+          .select();
+      }
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalText;
+
+      if (result.error) {
+        showToast('Error: ' + result.error.message, 'error');
+        return;
+      }
+
+      showToast(editingSupplierId ? 'Supplier updated successfully' : 'Supplier added successfully', 'success');
+      closeModal();
+      await loadSuppliers();
+    }
+
+    // ---- DELETE ----
+    function openDeleteModal(id, name) {
+      deletingSupplierId = id;
+      document.getElementById('deleteSupplierName').textContent = name;
+      document.getElementById('deleteModal').classList.add('show');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('show');
+      deletingSupplierId = null;
+    }
+
+    async function confirmDelete() {
+      if (!deletingSupplierId) return;
+
+      var confirmBtn = document.getElementById('deleteConfirmBtn');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Deleting...';
+
+      var { error } = await window._supabase
+        .from('suppliers')
+        .delete()
+        .eq('id', deletingSupplierId)
+        .eq('user_id', currentUser.id);
+
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Delete';
+
+      if (error) {
+        showToast('Error deleting supplier: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('Supplier deleted', 'success');
+      closeDeleteModal();
+      await loadSuppliers();
+    }
+
+    // ---- VIEW SUPPLIER ----
+    function viewSupplier(id) {
+      window.location.href = '/suppliers-detail.html?id=' + id;
+    }
+
+    // ---- HELPERS ----
+    function getInitials(name) {
+      if (!name) return '?';
+      var parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    }
+
+    function nameToHslColor(name) {
+      var hash = 0;
+      for (var i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      var h = Math.abs(hash) % 360;
+      return 'hsl(' + h + ', 55%, 45%)';
+    }
+
+    // ---- START ----
+    init();
+  </script>
+</body>
+</html>

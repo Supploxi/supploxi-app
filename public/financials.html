@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Financials</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/layout.js"></script>
+  <style>
+    .date-range-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .date-range-bar .btn {
+      padding: 6px 14px;
+      font-size: .78rem;
+    }
+
+    .margin-good { color: var(--primary); }
+    .margin-ok { color: var(--warning); }
+    .margin-bad { color: var(--danger); }
+
+    .margin-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: .7rem;
+      font-weight: 600;
+    }
+
+    .margin-badge.good {
+      background: rgba(0,212,170,.15);
+      color: var(--primary);
+      border: 1px solid rgba(0,212,170,.3);
+    }
+
+    .margin-badge.ok {
+      background: rgba(245,158,11,.15);
+      color: var(--warning);
+      border: 1px solid rgba(245,158,11,.3);
+    }
+
+    .margin-badge.bad {
+      background: rgba(255,71,87,.15);
+      color: var(--danger);
+      border: 1px solid rgba(255,71,87,.3);
+    }
+
+    .chart-container {
+      padding: 22px;
+    }
+
+    .chart-container canvas {
+      width: 100%;
+      height: 300px;
+      display: block;
+    }
+
+    .spend-pct-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .spend-pct-bar .progress-bar {
+      width: 80px;
+    }
+
+    .section-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 0;
+      color: var(--text-muted);
+      font-size: .85rem;
+    }
+
+    .section-loading .spinner {
+      width: 22px;
+      height: 22px;
+      border-width: 2px;
+    }
+
+    @media (max-width: 768px) {
+      .date-range-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .date-range-bar .btn {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main" id="mainContent">
+    <div class="loading" id="loadingState">
+      <div class="spinner"></div>
+      Loading financials...
+    </div>
+
+    <div id="financialsContent" style="display:none">
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <h2>Financial Analysis</h2>
+        <div class="date-range-bar" id="dateRangeBar">
+          <button class="btn btn-secondary" data-range="this_month">This Month</button>
+          <button class="btn btn-secondary" data-range="last_month">Last Month</button>
+          <button class="btn btn-secondary" data-range="last_3_months">Last 3 Months</button>
+          <button class="btn btn-primary" data-range="all_time">All Time</button>
+        </div>
+      </div>
+
+      <!-- STAT CARDS -->
+      <div class="stats-grid" id="statCards">
+        <div class="stat-card">
+          <div class="stat-label">Total COGS</div>
+          <div class="stat-value" id="statCogs">—</div>
+          <div class="stat-sub" id="statCogsDesc">Loading...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Shipping Costs</div>
+          <div class="stat-value" id="statShipping">—</div>
+          <div class="stat-sub" id="statShippingDesc">Loading...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Customs / Duties</div>
+          <div class="stat-value" id="statCustoms">—</div>
+          <div class="stat-sub" id="statCustomsDesc">Loading...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Landed Cost / Unit</div>
+          <div class="stat-value" id="statLanded">—</div>
+          <div class="stat-sub" id="statLandedDesc">Loading...</div>
+        </div>
+      </div>
+
+      <!-- COST BREAKDOWN BY SUPPLIER -->
+      <div class="section" id="supplierCostSection">
+        <div class="section-header">
+          <h3>Cost Breakdown by Supplier</h3>
+        </div>
+        <div id="supplierCostContent">
+          <div class="section-loading">
+            <div class="spinner"></div>
+            Loading supplier costs...
+          </div>
+        </div>
+      </div>
+
+      <!-- MARGIN ANALYSIS BY PRODUCT -->
+      <div class="section" id="marginSection">
+        <div class="section-header">
+          <h3>Margin Analysis by Product</h3>
+        </div>
+        <div id="marginContent">
+          <div class="section-loading">
+            <div class="spinner"></div>
+            Loading margin data...
+          </div>
+        </div>
+      </div>
+
+      <!-- MONTHLY SPEND TREND -->
+      <div class="section" id="trendSection">
+        <div class="section-header">
+          <h3>Monthly Spend Trend</h3>
+        </div>
+        <div id="trendContent">
+          <div class="chart-container">
+            <canvas id="spendChart" height="300"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUSTOMS DUTY TRACKER -->
+      <div class="section" id="customsSection">
+        <div class="section-header">
+          <h3>Customs Duty Tracker</h3>
+        </div>
+        <div id="customsContent">
+          <div class="section-loading">
+            <div class="spinner"></div>
+            Loading customs data...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =============================================
+    // STATE
+    // =============================================
+    var currentRange = 'all_time';
+    var userId = null;
+
+    // =============================================
+    // INIT
+    // =============================================
+    (async function init() {
+      await requireAuth();
+      renderLayout('financials');
+
+      var user = await getCurrentUser();
+      userId = user.id;
+
+      // Set up date range buttons
+      setupDateRangeButtons();
+
+      // Show content
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('financialsContent').style.display = 'block';
+
+      // Load all data
+      await loadAllData();
+    })();
+
+    // =============================================
+    // DATE RANGE
+    // =============================================
+    function setupDateRangeButtons() {
+      var bar = document.getElementById('dateRangeBar');
+      var buttons = bar.querySelectorAll('.btn');
+
+      buttons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          // Update active state
+          buttons.forEach(function(b) {
+            b.className = 'btn btn-secondary';
+          });
+          btn.className = 'btn btn-primary';
+
+          // Update range and reload
+          currentRange = btn.getAttribute('data-range');
+          loadAllData();
+        });
+      });
+    }
+
+    function getDateRange() {
+      var now = new Date();
+      var start = null;
+
+      if (currentRange === 'this_month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (currentRange === 'last_month') {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        var end = new Date(now.getFullYear(), now.getMonth(), 0);
+        return {
+          start: start.toISOString().split('T')[0],
+          end: end.toISOString().split('T')[0]
+        };
+      } else if (currentRange === 'last_3_months') {
+        start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      } else {
+        // all_time
+        return { start: null, end: null };
+      }
+
+      return {
+        start: start ? start.toISOString().split('T')[0] : null,
+        end: now.toISOString().split('T')[0]
+      };
+    }
+
+    // =============================================
+    // LOAD ALL DATA
+    // =============================================
+    async function loadAllData() {
+      await Promise.allSettled([
+        loadStatCards(),
+        loadSupplierCosts(),
+        loadMarginAnalysis(),
+        loadMonthlyTrend(),
+        loadCustomsDuty()
+      ]);
+    }
+
+    // =============================================
+    // STAT CARDS
+    // =============================================
+    async function loadStatCards() {
+      var sb = window._supabase;
+      var range = getDateRange();
+
+      // Reset cards to loading
+      document.getElementById('statCogs').textContent = '...';
+      document.getElementById('statShipping').textContent = '...';
+      document.getElementById('statCustoms').textContent = '...';
+      document.getElementById('statLanded').textContent = '...';
+
+      try {
+        // Fetch purchase orders with items for COGS
+        var poQuery = sb
+          .from('purchase_orders')
+          .select('id, order_date, po_items(quantity, unit_price)')
+          .eq('user_id', userId);
+
+        if (range.start) {
+          poQuery = poQuery.gte('order_date', range.start);
+        }
+        if (range.end) {
+          poQuery = poQuery.lte('order_date', range.end);
+        }
+
+        // Fetch shipments for shipping + customs
+        var shipQuery = sb
+          .from('shipments')
+          .select('shipping_cost, customs_duty, insurance_cost')
+          .eq('user_id', userId);
+
+        if (range.start) {
+          shipQuery = shipQuery.gte('ship_date', range.start);
+        }
+        if (range.end) {
+          shipQuery = shipQuery.lte('ship_date', range.end);
+        }
+
+        // Fetch products for avg landed cost
+        var productsQuery = sb
+          .from('products')
+          .select('landed_cost')
+          .eq('user_id', userId);
+
+        var results = await Promise.all([
+          poQuery,
+          shipQuery,
+          productsQuery
+        ]);
+
+        var poData = results[0].data || [];
+        var shipData = results[1].data || [];
+        var productsData = results[2].data || [];
+
+        // Total COGS
+        var totalCogs = 0;
+        poData.forEach(function(po) {
+          if (po.po_items && po.po_items.length > 0) {
+            po.po_items.forEach(function(item) {
+              var qty = Number(item.quantity) || 0;
+              var cost = Number(item.unit_price) || 0;
+              totalCogs += qty * cost;
+            });
+          }
+        });
+
+        document.getElementById('statCogs').textContent = formatCurrency(totalCogs);
+        document.getElementById('statCogsDesc').textContent = poData.length + ' purchase order' + (poData.length !== 1 ? 's' : '') + ' in range';
+
+        // Total Shipping Costs
+        var totalShipping = 0;
+        shipData.forEach(function(s) {
+          totalShipping += Number(s.shipping_cost) || 0;
+        });
+
+        document.getElementById('statShipping').textContent = formatCurrency(totalShipping);
+        document.getElementById('statShippingDesc').textContent = shipData.length + ' shipment' + (shipData.length !== 1 ? 's' : '') + ' in range';
+
+        // Total Customs / Duties
+        var totalCustoms = 0;
+        shipData.forEach(function(s) {
+          totalCustoms += Number(s.customs_duty) || 0;
+        });
+
+        document.getElementById('statCustoms').textContent = formatCurrency(totalCustoms);
+        document.getElementById('statCustomsDesc').textContent = totalCustoms > 0 ? 'Across ' + shipData.length + ' shipment' + (shipData.length !== 1 ? 's' : '') : 'No customs duties recorded';
+
+        // Avg Landed Cost per Unit
+        var landedCosts = productsData.filter(function(p) {
+          return p.landed_cost != null && Number(p.landed_cost) > 0;
+        });
+        var avgLanded = 0;
+        if (landedCosts.length > 0) {
+          var sumLanded = 0;
+          landedCosts.forEach(function(p) {
+            sumLanded += Number(p.landed_cost);
+          });
+          avgLanded = sumLanded / landedCosts.length;
+        }
+
+        document.getElementById('statLanded').textContent = formatCurrency(avgLanded);
+        document.getElementById('statLandedDesc').textContent = landedCosts.length + ' product' + (landedCosts.length !== 1 ? 's' : '') + ' with landed cost data';
+
+      } catch (err) {
+        console.error('Failed to load stat cards:', err);
+        document.getElementById('statCogs').textContent = '—';
+        document.getElementById('statShipping').textContent = '—';
+        document.getElementById('statCustoms').textContent = '—';
+        document.getElementById('statLanded').textContent = '—';
+      }
+    }
+
+    // =============================================
+    // COST BREAKDOWN BY SUPPLIER
+    // =============================================
+    async function loadSupplierCosts() {
+      var sb = window._supabase;
+      var container = document.getElementById('supplierCostContent');
+      var range = getDateRange();
+
+      container.innerHTML = '<div class="section-loading"><div class="spinner"></div>Loading supplier costs...</div>';
+
+      try {
+        var query = sb
+          .from('purchase_orders')
+          .select('supplier_id, order_date, suppliers(company_name), po_items(quantity, unit_price)')
+          .eq('user_id', userId);
+
+        if (range.start) {
+          query = query.gte('order_date', range.start);
+        }
+        if (range.end) {
+          query = query.lte('order_date', range.end);
+        }
+
+        var result = await query;
+        var data = result.data || [];
+
+        if (data.length === 0) {
+          container.innerHTML = '<div class="empty-state"><p>No purchase order data</p><small>Create purchase orders to see cost breakdown by supplier</small></div>';
+          return;
+        }
+
+        // Group by supplier
+        var supplierMap = {};
+        var grandTotal = 0;
+
+        data.forEach(function(po) {
+          var sid = po.supplier_id || 'unknown';
+          var sname = (po.suppliers && po.suppliers.company_name) ? po.suppliers.company_name : 'Unknown Supplier';
+
+          if (!supplierMap[sid]) {
+            supplierMap[sid] = { name: sname, units: 0, totalCogs: 0 };
+          }
+
+          if (po.po_items && po.po_items.length > 0) {
+            po.po_items.forEach(function(item) {
+              var qty = Number(item.quantity) || 0;
+              var cost = Number(item.unit_price) || 0;
+              supplierMap[sid].units += qty;
+              supplierMap[sid].totalCogs += qty * cost;
+              grandTotal += qty * cost;
+            });
+          }
+        });
+
+        // Convert to array and sort by total COGS descending
+        var suppliers = [];
+        Object.keys(supplierMap).forEach(function(sid) {
+          suppliers.push(supplierMap[sid]);
+        });
+        suppliers.sort(function(a, b) { return b.totalCogs - a.totalCogs; });
+
+        var rows = '';
+        suppliers.forEach(function(s) {
+          var avgUnit = s.units > 0 ? s.totalCogs / s.units : 0;
+          var pct = grandTotal > 0 ? (s.totalCogs / grandTotal * 100) : 0;
+          var pctWidth = Math.min(pct, 100);
+
+          rows += '<tr>' +
+            '<td class="cell-primary">' + escapeHtml(s.name) + '</td>' +
+            '<td>' + s.units.toLocaleString() + '</td>' +
+            '<td>' + formatCurrency(s.totalCogs) + '</td>' +
+            '<td>' + formatCurrency(avgUnit) + '</td>' +
+            '<td>' +
+              '<div class="spend-pct-bar">' +
+                '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + pctWidth + '%;background:var(--primary)"></div></div>' +
+                '<span>' + pct.toFixed(1) + '%</span>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+        });
+
+        container.innerHTML =
+          '<table>' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Supplier</th>' +
+                '<th>Units Purchased</th>' +
+                '<th>Total COGS</th>' +
+                '<th>Avg Unit Cost</th>' +
+                '<th>% of Total Spend</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + rows + '</tbody>' +
+          '</table>';
+
+      } catch (err) {
+        console.error('Failed to load supplier costs:', err);
+        container.innerHTML = '<div class="empty-state"><p>Failed to load supplier costs</p><small>' + escapeHtml(String(err.message || err)) + '</small></div>';
+      }
+    }
+
+    // =============================================
+    // MARGIN ANALYSIS BY PRODUCT
+    // =============================================
+    async function loadMarginAnalysis() {
+      var sb = window._supabase;
+      var container = document.getElementById('marginContent');
+
+      container.innerHTML = '<div class="section-loading"><div class="spinner"></div>Loading margin data...</div>';
+
+      try {
+        var result = await sb
+          .from('products')
+          .select('name, selling_price, landed_cost')
+          .eq('user_id', userId)
+          .order('name', { ascending: true });
+
+        var data = result.data || [];
+
+        if (data.length === 0) {
+          container.innerHTML = '<div class="empty-state"><p>No product data</p><small>Add products with selling price and landed cost to see margin analysis</small></div>';
+          return;
+        }
+
+        var rows = '';
+        data.forEach(function(p) {
+          var name = p.name || 'Unnamed Product';
+          var sellingPrice = Number(p.selling_price) || 0;
+          var landedCost = Number(p.landed_cost) || 0;
+          var marginDollar = sellingPrice - landedCost;
+          var marginPct = sellingPrice > 0 ? (marginDollar / sellingPrice * 100) : 0;
+
+          var marginClass, badgeClass, badgeLabel;
+          if (marginPct > 40) {
+            marginClass = 'margin-good';
+            badgeClass = 'good';
+            badgeLabel = 'Healthy';
+          } else if (marginPct >= 20) {
+            marginClass = 'margin-ok';
+            badgeClass = 'ok';
+            badgeLabel = 'Watch';
+          } else {
+            marginClass = 'margin-bad';
+            badgeClass = 'bad';
+            badgeLabel = 'Low';
+          }
+
+          // Handle edge case when no selling price is set
+          if (sellingPrice <= 0) {
+            marginClass = 'margin-bad';
+            badgeClass = 'bad';
+            badgeLabel = 'No Price';
+          }
+
+          rows += '<tr>' +
+            '<td class="cell-primary">' + escapeHtml(name) + '</td>' +
+            '<td>' + formatCurrency(sellingPrice) + '</td>' +
+            '<td>' + formatCurrency(landedCost) + '</td>' +
+            '<td class="' + marginClass + '" style="font-weight:600">' + formatCurrency(marginDollar) + '</td>' +
+            '<td class="' + marginClass + '" style="font-weight:600">' + marginPct.toFixed(1) + '%</td>' +
+            '<td><span class="margin-badge ' + badgeClass + '">' + badgeLabel + '</span></td>' +
+          '</tr>';
+        });
+
+        container.innerHTML =
+          '<table>' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Product</th>' +
+                '<th>Selling Price</th>' +
+                '<th>Landed Cost</th>' +
+                '<th>Gross Margin $</th>' +
+                '<th>Margin %</th>' +
+                '<th>Status</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + rows + '</tbody>' +
+          '</table>';
+
+      } catch (err) {
+        console.error('Failed to load margin analysis:', err);
+        container.innerHTML = '<div class="empty-state"><p>Failed to load margin data</p><small>' + escapeHtml(String(err.message || err)) + '</small></div>';
+      }
+    }
+
+    // =============================================
+    // MONTHLY SPEND TREND (Canvas Chart)
+    // =============================================
+    async function loadMonthlyTrend() {
+      var sb = window._supabase;
+      var canvas = document.getElementById('spendChart');
+      var ctx = canvas.getContext('2d');
+      var range = getDateRange();
+
+      // Clear canvas
+      canvas.width = canvas.parentElement.offsetWidth;
+      canvas.height = 300;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw loading text
+      ctx.fillStyle = '#8b8fa8';
+      ctx.font = '14px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2);
+
+      try {
+        var query = sb
+          .from('purchase_orders')
+          .select('order_date, total_value')
+          .eq('user_id', userId)
+          .order('order_date', { ascending: true });
+
+        if (range.start) {
+          query = query.gte('order_date', range.start);
+        }
+        if (range.end) {
+          query = query.lte('order_date', range.end);
+        }
+
+        var result = await query;
+        var data = result.data || [];
+
+        if (data.length === 0) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#8b8fa8';
+          ctx.font = '14px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('No purchase order data available', canvas.width / 2, canvas.height / 2);
+          return;
+        }
+
+        // Group by month
+        var monthlyData = {};
+        data.forEach(function(po) {
+          if (!po.order_date) return;
+          var d = new Date(po.order_date);
+          var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+          if (!monthlyData[key]) {
+            monthlyData[key] = 0;
+          }
+          monthlyData[key] += Number(po.total_value) || 0;
+        });
+
+        // Sort months
+        var months = Object.keys(monthlyData).sort();
+
+        if (months.length === 0) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#8b8fa8';
+          ctx.font = '14px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('No monthly data to display', canvas.width / 2, canvas.height / 2);
+          return;
+        }
+
+        var values = months.map(function(m) { return monthlyData[m]; });
+        var maxValue = Math.max.apply(null, values);
+        if (maxValue === 0) maxValue = 1;
+
+        // Draw chart
+        drawBarChart(canvas, ctx, months, values, maxValue);
+
+      } catch (err) {
+        console.error('Failed to load monthly trend:', err);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ff4757';
+        ctx.font = '14px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Failed to load trend data', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function drawBarChart(canvas, ctx, months, values, maxValue) {
+      var w = canvas.width;
+      var h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      // Chart area
+      var paddingLeft = 80;
+      var paddingRight = 20;
+      var paddingTop = 20;
+      var paddingBottom = 40;
+
+      var chartW = w - paddingLeft - paddingRight;
+      var chartH = h - paddingTop - paddingBottom;
+      var barCount = months.length;
+      var barGap = Math.max(4, Math.min(12, chartW / barCount * 0.25));
+      var barWidth = (chartW - barGap * (barCount + 1)) / barCount;
+
+      // Clamp bar width
+      if (barWidth > 60) barWidth = 60;
+      if (barWidth < 8) barWidth = 8;
+
+      // Recalculate to center bars
+      var totalBarsWidth = barCount * barWidth + (barCount + 1) * barGap;
+      var offsetX = paddingLeft + (chartW - totalBarsWidth) / 2;
+
+      // Draw y-axis gridlines and labels
+      var gridLines = 5;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.font = '11px Inter, sans-serif';
+
+      for (var i = 0; i <= gridLines; i++) {
+        var yVal = (maxValue / gridLines) * i;
+        var yPos = paddingTop + chartH - (chartH * (i / gridLines));
+
+        // Gridline
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(42,45,62,0.6)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(paddingLeft, yPos);
+        ctx.lineTo(w - paddingRight, yPos);
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = '#8b8fa8';
+        var labelText;
+        if (yVal >= 1000000) {
+          labelText = '$' + (yVal / 1000000).toFixed(1) + 'M';
+        } else if (yVal >= 1000) {
+          labelText = '$' + (yVal / 1000).toFixed(1) + 'K';
+        } else {
+          labelText = '$' + Math.round(yVal);
+        }
+        ctx.fillText(labelText, paddingLeft - 10, yPos);
+      }
+
+      // Draw bars
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+
+      for (var j = 0; j < barCount; j++) {
+        var barH = (values[j] / maxValue) * chartH;
+        var barX = offsetX + barGap + j * (barWidth + barGap);
+        var barY = paddingTop + chartH - barH;
+
+        // Bar
+        ctx.fillStyle = '#00d4aa';
+        ctx.beginPath();
+        var radius = Math.min(4, barWidth / 4);
+        // Rounded top corners
+        ctx.moveTo(barX, barY + barH);
+        ctx.lineTo(barX, barY + radius);
+        ctx.quadraticCurveTo(barX, barY, barX + radius, barY);
+        ctx.lineTo(barX + barWidth - radius, barY);
+        ctx.quadraticCurveTo(barX + barWidth, barY, barX + barWidth, barY + radius);
+        ctx.lineTo(barX + barWidth, barY + barH);
+        ctx.closePath();
+        ctx.fill();
+
+        // Month label
+        var parts = months[j].split('-');
+        var monthIdx = parseInt(parts[1], 10) - 1;
+        var label = monthNames[monthIdx];
+        if (barCount <= 12) {
+          label = monthNames[monthIdx] + ' ' + parts[0].substring(2);
+        }
+
+        ctx.fillStyle = '#8b8fa8';
+        ctx.font = '11px Inter, sans-serif';
+        ctx.fillText(label, barX + barWidth / 2, paddingTop + chartH + 10);
+
+        // Value label on top of bar (if space allows)
+        if (barH > 20) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '10px Inter, sans-serif';
+          ctx.textBaseline = 'bottom';
+          var valLabel;
+          if (values[j] >= 1000000) {
+            valLabel = '$' + (values[j] / 1000000).toFixed(1) + 'M';
+          } else if (values[j] >= 1000) {
+            valLabel = '$' + (values[j] / 1000).toFixed(1) + 'K';
+          } else {
+            valLabel = '$' + Math.round(values[j]);
+          }
+          ctx.fillText(valLabel, barX + barWidth / 2, barY - 4);
+          ctx.textBaseline = 'top';
+        }
+      }
+    }
+
+    // =============================================
+    // CUSTOMS DUTY TRACKER
+    // =============================================
+    async function loadCustomsDuty() {
+      var sb = window._supabase;
+      var container = document.getElementById('customsContent');
+      var range = getDateRange();
+
+      container.innerHTML = '<div class="section-loading"><div class="spinner"></div>Loading customs data...</div>';
+
+      try {
+        var query = sb
+          .from('shipments')
+          .select('tracking_number, carrier, ship_date, customs_duty, insurance_cost, shipping_cost')
+          .eq('user_id', userId)
+          .order('ship_date', { ascending: false });
+
+        if (range.start) {
+          query = query.gte('ship_date', range.start);
+        }
+        if (range.end) {
+          query = query.lte('ship_date', range.end);
+        }
+
+        var result = await query;
+        var data = result.data || [];
+
+        if (data.length === 0) {
+          container.innerHTML = '<div class="empty-state"><p>No shipment data</p><small>Add shipments with customs duty information to track here</small></div>';
+          return;
+        }
+
+        var rows = '';
+        data.forEach(function(s) {
+          var tracking = s.tracking_number ? escapeHtml(s.tracking_number) : '—';
+          var carrier = s.carrier ? escapeHtml(s.carrier) : '—';
+          var shipDate = s.ship_date ? formatDate(s.ship_date) : '—';
+          var duty = Number(s.customs_duty) || 0;
+          var insurance = Number(s.insurance_cost) || 0;
+          var shipping = Number(s.shipping_cost) || 0;
+          var totalLanded = shipping + insurance + duty;
+
+          rows += '<tr>' +
+            '<td class="cell-primary">' + tracking + '</td>' +
+            '<td>' + carrier + '</td>' +
+            '<td>' + shipDate + '</td>' +
+            '<td>' + formatCurrency(duty) + '</td>' +
+            '<td>' + formatCurrency(insurance) + '</td>' +
+            '<td style="font-weight:600;color:var(--text)">' + formatCurrency(totalLanded) + '</td>' +
+          '</tr>';
+        });
+
+        container.innerHTML =
+          '<table>' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Shipment</th>' +
+                '<th>Carrier</th>' +
+                '<th>Ship Date</th>' +
+                '<th>Customs Duty</th>' +
+                '<th>Insurance</th>' +
+                '<th>Total Landed Cost</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + rows + '</tbody>' +
+          '</table>';
+
+      } catch (err) {
+        console.error('Failed to load customs data:', err);
+        container.innerHTML = '<div class="empty-state"><p>Failed to load customs data</p><small>' + escapeHtml(String(err.message || err)) + '</small></div>';
+      }
+    }
+
+    // =============================================
+    // HANDLE CANVAS RESIZE
+    // =============================================
+    window.addEventListener('resize', function() {
+      // Debounce resize
+      clearTimeout(window._resizeTimer);
+      window._resizeTimer = setTimeout(function() {
+        loadMonthlyTrend();
+      }, 250);
+    });
+  </script>
+</body>
+</html>

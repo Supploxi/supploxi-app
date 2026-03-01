@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Shipment Detail</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/layout.js"></script>
+  <style>
+    .detail-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .detail-header-left h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      margin-bottom: 8px;
+    }
+
+    .detail-header-left .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .85rem;
+      color: var(--text-muted);
+    }
+
+    .detail-header-left .header-meta .carrier-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .detail-header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: border-color .15s;
+    }
+    .info-card:hover { border-color: var(--border-light); }
+
+    .info-card .info-label {
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .info-card .info-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--text);
+    }
+
+    .linked-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .linked-grid { grid-template-columns: 1fr; }
+    }
+
+    .linked-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .linked-card-header {
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+      font-size: .95rem;
+      font-weight: 700;
+    }
+
+    .linked-card-body {
+      padding: 20px 22px;
+    }
+
+    .linked-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: .85rem;
+    }
+
+    .linked-row .linked-label {
+      color: var(--text-muted);
+    }
+
+    .linked-row .linked-value {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .linked-row .linked-value a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .linked-row .linked-value a:hover { text-decoration: underline; }
+
+    .no-linked {
+      text-align: center;
+      padding: 28px 0;
+      color: var(--text-dim);
+      font-size: .85rem;
+    }
+
+    .cost-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      font-size: .85rem;
+    }
+
+    .cost-row .cost-label {
+      color: var(--text-muted);
+    }
+
+    .cost-row .cost-value {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .cost-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+
+    .cost-total .cost-label {
+      color: var(--text) !important;
+      font-weight: 700;
+      font-size: .9rem;
+    }
+
+    .cost-total .cost-value {
+      color: var(--primary) !important;
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    .event-form {
+      display: none;
+      padding: 18px 22px;
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,.02);
+    }
+
+    .event-form.show { display: block; }
+
+    .event-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .event-form-grid { grid-template-columns: 1fr; }
+    }
+
+    .empty-timeline {
+      text-align: center;
+      padding: 32px 22px;
+      color: var(--text-dim);
+    }
+
+    .empty-timeline p {
+      font-size: .9rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main" id="mainContent">
+    <div class="loading" id="loadingState">
+      <div class="spinner"></div> Loading shipment...
+    </div>
+
+    <div id="detailContent" style="display:none">
+
+      <!-- Page Header -->
+      <div class="detail-header">
+        <div class="detail-header-left">
+          <h2 id="trackingTitle">--</h2>
+          <div class="header-meta">
+            <span class="carrier-name" id="carrierName">--</span>
+            <span id="statusBadgeEl"></span>
+          </div>
+        </div>
+        <div class="detail-header-right">
+          <a href="/shipments.html" class="btn btn-secondary">Back to Shipments</a>
+          <button class="btn btn-primary btn-sm" id="btnAdvanceStatus" style="display:none" onclick="advanceStatus()">--</button>
+        </div>
+      </div>
+
+      <!-- Shipment Progress Bar -->
+      <div class="section" style="margin-bottom:24px">
+        <div class="ship-progress" id="shipProgress">
+          <div class="ship-step" data-step="processing">
+            <div class="ship-dot">&#x1F4E6;</div>
+            <div class="ship-label">Processing</div>
+          </div>
+          <div class="ship-step" data-step="in transit">
+            <div class="ship-dot">&#x1F6A2;</div>
+            <div class="ship-label">In Transit</div>
+          </div>
+          <div class="ship-step" data-step="customs">
+            <div class="ship-dot">&#x1F6C3;</div>
+            <div class="ship-label">Customs</div>
+          </div>
+          <div class="ship-step" data-step="out for delivery">
+            <div class="ship-dot">&#x1F69A;</div>
+            <div class="ship-label">Out for Delivery</div>
+          </div>
+          <div class="ship-step" data-step="delivered">
+            <div class="ship-dot">&#x2705;</div>
+            <div class="ship-label">Delivered</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Stat Cards -->
+      <div class="info-grid" id="infoGrid">
+        <div class="info-card">
+          <div class="info-label">Ship Date</div>
+          <div class="info-value" id="infoShipDate">--</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">ETA</div>
+          <div class="info-value" id="infoETA">--</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Days in Transit</div>
+          <div class="info-value" id="infoDays">--</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Weight</div>
+          <div class="info-value" id="infoWeight">--</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Packages</div>
+          <div class="info-value" id="infoPackages">--</div>
+        </div>
+      </div>
+
+      <!-- Tracking Timeline -->
+      <div class="section" id="timelineSection">
+        <div class="section-header">
+          <h3>Tracking Timeline</h3>
+          <button class="btn btn-sm btn-secondary" id="btnToggleEventForm" onclick="toggleEventForm()">+ Add Event</button>
+        </div>
+        <div class="event-form" id="eventForm">
+          <div class="event-form-grid">
+            <div class="form-group" style="margin-bottom:0">
+              <label for="eventDate">Date &amp; Time</label>
+              <input type="datetime-local" class="form-control" id="eventDate">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label for="eventLocation">Location</label>
+              <input type="text" class="form-control" id="eventLocation" placeholder="e.g. Shanghai Port">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label for="eventDescription">Description</label>
+              <input type="text" class="form-control" id="eventDescription" placeholder="e.g. Departed warehouse">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label for="eventStatus">Status</label>
+              <select class="form-control" id="eventStatus">
+                <option value="Processing">Processing</option>
+                <option value="In Transit">In Transit</option>
+                <option value="Customs">Customs</option>
+                <option value="Out for Delivery">Out for Delivery</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addTrackingEvent()">Add</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleEventForm()" style="margin-left:6px">Cancel</button>
+        </div>
+        <div class="timeline" id="timelineBody">
+          <div class="loading"><div class="spinner"></div> Loading events...</div>
+        </div>
+      </div>
+
+      <!-- Linked Order & Supplier -->
+      <div class="linked-grid">
+        <div class="linked-card">
+          <div class="linked-card-header">Linked Purchase Order</div>
+          <div class="linked-card-body" id="linkedPO">
+            <div class="no-linked">Loading...</div>
+          </div>
+        </div>
+        <div class="linked-card">
+          <div class="linked-card-header">Linked Supplier</div>
+          <div class="linked-card-body" id="linkedSupplier">
+            <div class="no-linked">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost Breakdown -->
+      <div class="section" style="padding:22px">
+        <div style="margin-bottom:16px;font-size:.95rem;font-weight:700;">Cost Breakdown</div>
+        <div id="costBreakdown">
+          <div class="cost-row">
+            <span class="cost-label">Shipping Cost</span>
+            <span class="cost-value" id="costShipping">$0.00</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">Insurance</span>
+            <span class="cost-value" id="costInsurance">$0.00</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">Customs Duty</span>
+            <span class="cost-value" id="costCustoms">$0.00</span>
+          </div>
+          <hr class="cost-divider">
+          <div class="cost-row cost-total">
+            <span class="cost-label">Total Landed Cost</span>
+            <span class="cost-value" id="costTotal">$0.00</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let shipment = null;
+    let shipmentId = null;
+
+    const STATUS_ORDER = ['processing', 'in transit', 'customs', 'out for delivery', 'delivered'];
+
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      renderLayout('shipments');
+
+      const params = new URLSearchParams(window.location.search);
+      shipmentId = params.get('id');
+
+      if (!shipmentId) {
+        document.getElementById('loadingState').innerHTML =
+          '<div class="empty-state"><p>No shipment ID provided</p><small><a href="/shipments.html" style="color:var(--primary)">Back to Shipments</a></small></div>';
+        return;
+      }
+
+      await loadShipment();
+    }
+
+    // ---- Load Shipment ----
+
+    async function loadShipment() {
+      const { data, error } = await window._supabase
+        .from('shipments')
+        .select('*, suppliers(id, company_name, country, email, phone), purchase_orders(id, po_number, order_date, total_value, status)')
+        .eq('id', shipmentId)
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (error || !data) {
+        document.getElementById('loadingState').innerHTML =
+          '<div class="empty-state"><p>Shipment not found</p><small><a href="/shipments.html" style="color:var(--primary)">Back to Shipments</a></small></div>';
+        return;
+      }
+
+      shipment = data;
+
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('detailContent').style.display = 'block';
+
+      renderHeader();
+      renderProgress();
+      renderInfoCards();
+      renderLinkedCards();
+      renderCostBreakdown();
+      await loadTrackingEvents();
+    }
+
+    // ---- Header ----
+
+    function renderHeader() {
+      document.getElementById('trackingTitle').textContent = shipment.tracking_number || 'No Tracking Number';
+      document.getElementById('carrierName').textContent = shipment.carrier || 'Unknown Carrier';
+      document.getElementById('statusBadgeEl').innerHTML = statusBadge(shipment.status);
+
+      // Set page title
+      document.title = 'Supploxi — ' + (shipment.tracking_number || 'Shipment');
+
+      // Show advance status button if not yet delivered
+      const currentIdx = STATUS_ORDER.indexOf((shipment.status || '').toLowerCase());
+      if (currentIdx >= 0 && currentIdx < STATUS_ORDER.length - 1) {
+        const nextStatus = STATUS_ORDER[currentIdx + 1];
+        const btn = document.getElementById('btnAdvanceStatus');
+        btn.style.display = 'inline-flex';
+        btn.textContent = 'Mark as ' + capitalizeStatus(nextStatus);
+      } else {
+        document.getElementById('btnAdvanceStatus').style.display = 'none';
+      }
+    }
+
+    function capitalizeStatus(s) {
+      return s.replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    // ---- Advance Status ----
+
+    async function advanceStatus() {
+      const currentIdx = STATUS_ORDER.indexOf((shipment.status || '').toLowerCase());
+      if (currentIdx < 0 || currentIdx >= STATUS_ORDER.length - 1) return;
+
+      const nextStatus = capitalizeStatus(STATUS_ORDER[currentIdx + 1]);
+
+      const btn = document.getElementById('btnAdvanceStatus');
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+
+      const updateData = { status: nextStatus };
+
+      // If moving to delivered, set actual_arrival
+      if (nextStatus.toLowerCase() === 'delivered') {
+        updateData.actual_arrival = new Date().toISOString().split('T')[0];
+      }
+
+      const { error } = await window._supabase
+        .from('shipments')
+        .update(updateData)
+        .eq('id', shipmentId)
+        .eq('user_id', currentUser.id);
+
+      btn.disabled = false;
+
+      if (error) {
+        showToast('Failed to update status: ' + error.message, 'error');
+        btn.textContent = 'Mark as ' + nextStatus;
+        return;
+      }
+
+      shipment.status = nextStatus;
+      if (updateData.actual_arrival) {
+        shipment.actual_arrival = updateData.actual_arrival;
+      }
+
+      showToast('Status updated to ' + nextStatus, 'success');
+      renderHeader();
+      renderProgress();
+      renderInfoCards();
+    }
+
+    // ---- Progress Bar ----
+
+    function renderProgress() {
+      const steps = document.querySelectorAll('#shipProgress .ship-step');
+      const currentStatus = (shipment.status || '').toLowerCase();
+      const currentIdx = STATUS_ORDER.indexOf(currentStatus);
+
+      steps.forEach((step, i) => {
+        step.classList.remove('done', 'active');
+        if (currentIdx >= 0) {
+          if (i < currentIdx) {
+            step.classList.add('done');
+          } else if (i === currentIdx) {
+            step.classList.add('active');
+          }
+        }
+      });
+    }
+
+    // ---- Info Cards ----
+
+    function renderInfoCards() {
+      document.getElementById('infoShipDate').textContent = formatDate(shipment.ship_date);
+      document.getElementById('infoETA').textContent = formatDate(shipment.estimated_arrival);
+
+      // Days in transit
+      if (shipment.ship_date) {
+        const statusLower = (shipment.status || '').toLowerCase();
+        let endDate;
+        if (statusLower === 'delivered' && shipment.actual_arrival) {
+          endDate = shipment.actual_arrival;
+        } else {
+          endDate = new Date().toISOString().split('T')[0];
+        }
+        const days = Math.max(0, daysBetween(shipment.ship_date, endDate));
+        document.getElementById('infoDays').textContent = days;
+      } else {
+        document.getElementById('infoDays').textContent = '--';
+      }
+
+      document.getElementById('infoWeight').textContent =
+        shipment.weight_kg != null ? shipment.weight_kg + ' kg' : '--';
+
+      document.getElementById('infoPackages').textContent =
+        shipment.num_packages != null ? shipment.num_packages : '--';
+    }
+
+    // ---- Tracking Timeline ----
+
+    async function loadTrackingEvents() {
+      const { data, error } = await window._supabase
+        .from('tracking_events')
+        .select('*')
+        .eq('shipment_id', shipmentId)
+        .order('event_date', { ascending: false });
+
+      const container = document.getElementById('timelineBody');
+
+      if (error) {
+        container.innerHTML = '<div class="empty-timeline"><p>Error loading tracking events</p></div>';
+        return;
+      }
+
+      const events = data || [];
+
+      if (events.length === 0) {
+        container.innerHTML = `
+          <div class="empty-timeline">
+            <p>No tracking events yet</p>
+            <button class="btn btn-primary btn-sm" onclick="toggleEventForm()">+ Add Event</button>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = events.map(ev => {
+        const evDate = ev.event_date
+          ? new Date(ev.event_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : '--';
+        return `
+          <div class="timeline-item">
+            <div>
+              <div class="tl-date">${escapeHtml(evDate)}</div>
+              <div class="tl-desc">${escapeHtml(ev.description || 'No description')}</div>
+              <div class="tl-loc">${escapeHtml(ev.location || '')}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function toggleEventForm() {
+      const form = document.getElementById('eventForm');
+      form.classList.toggle('show');
+
+      // Set default date to now
+      if (form.classList.contains('show')) {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const local = new Date(now - offset);
+        document.getElementById('eventDate').value = local.toISOString().slice(0, 16);
+      }
+    }
+
+    async function addTrackingEvent() {
+      const eventDate = document.getElementById('eventDate').value;
+      const location = document.getElementById('eventLocation').value.trim();
+      const description = document.getElementById('eventDescription').value.trim();
+      const status = document.getElementById('eventStatus').value;
+
+      if (!eventDate || !description) {
+        showToast('Please provide at least a date and description', 'error');
+        return;
+      }
+
+      const { error } = await window._supabase
+        .from('tracking_events')
+        .insert({
+          shipment_id: shipmentId,
+          event_date: eventDate,
+          location: location || null,
+          description: description,
+          status: status
+        });
+
+      if (error) {
+        showToast('Failed to add event: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('Tracking event added', 'success');
+
+      // Reset form fields
+      document.getElementById('eventLocation').value = '';
+      document.getElementById('eventDescription').value = '';
+      document.getElementById('eventForm').classList.remove('show');
+
+      await loadTrackingEvents();
+    }
+
+    // ---- Linked Order & Supplier ----
+
+    function renderLinkedCards() {
+      // Purchase Order card
+      const poContainer = document.getElementById('linkedPO');
+      if (shipment.purchase_orders && shipment.purchase_orders.po_number) {
+        const po = shipment.purchase_orders;
+        poContainer.innerHTML = `
+          <div class="linked-row">
+            <span class="linked-label">PO Number</span>
+            <span class="linked-value"><a href="/po-detail.html?id=${escapeHtml(po.id)}">${escapeHtml(po.po_number)}</a></span>
+          </div>
+          <div class="linked-row">
+            <span class="linked-label">Order Date</span>
+            <span class="linked-value">${formatDate(po.order_date)}</span>
+          </div>
+          <div class="linked-row">
+            <span class="linked-label">Total Value</span>
+            <span class="linked-value">${formatCurrency(po.total_value)}</span>
+          </div>
+          <div class="linked-row">
+            <span class="linked-label">Status</span>
+            <span class="linked-value">${statusBadge(po.status)}</span>
+          </div>`;
+      } else {
+        poContainer.innerHTML = '<div class="no-linked">No PO linked</div>';
+      }
+
+      // Supplier card
+      const supplierContainer = document.getElementById('linkedSupplier');
+      if (shipment.suppliers && shipment.suppliers.company_name) {
+        const sup = shipment.suppliers;
+        const flag = typeof countryFlag === 'function' ? countryFlag(sup.country) : '';
+        supplierContainer.innerHTML = `
+          <div class="linked-row">
+            <span class="linked-label">Company</span>
+            <span class="linked-value"><a href="/suppliers-detail.html?id=${escapeHtml(sup.id)}">${escapeHtml(sup.company_name)}</a></span>
+          </div>
+          <div class="linked-row">
+            <span class="linked-label">Country</span>
+            <span class="linked-value">${flag} ${escapeHtml(sup.country || '--')}</span>
+          </div>
+          <div class="linked-row">
+            <span class="linked-label">Email</span>
+            <span class="linked-value">${escapeHtml(sup.email || '--')}</span>
+          </div>
+          <div class="linked-row">
+            <span class="linked-label">Phone</span>
+            <span class="linked-value">${escapeHtml(sup.phone || '--')}</span>
+          </div>`;
+      } else {
+        supplierContainer.innerHTML = '<div class="no-linked">No supplier linked</div>';
+      }
+    }
+
+    // ---- Cost Breakdown ----
+
+    function renderCostBreakdown() {
+      const shipping = Number(shipment.shipping_cost) || 0;
+      const insurance = Number(shipment.insurance_cost) || 0;
+      const customs = Number(shipment.customs_duty) || 0;
+      const total = shipping + insurance + customs;
+
+      document.getElementById('costShipping').textContent = formatCurrency(shipping);
+      document.getElementById('costInsurance').textContent = formatCurrency(insurance);
+      document.getElementById('costCustoms').textContent = formatCurrency(customs);
+      document.getElementById('costTotal').textContent = formatCurrency(total);
+    }
+
+    // ---- Init ----
+    init();
+  </script>
+</body>
+</html>
