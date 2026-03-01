@@ -1,96 +1,121 @@
-// Supploxi — Shared Supabase Client
-const SUPABASE_URL = 'https://nmlnwcclgufxjkklqntl.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tbG53Y2NsZ3VmeGpra2xxbnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNzk3MDgsImV4cCI6MjA4Nzk1NTcwOH0.8z2qgjtqUJpd0qrG7DmFPHGokvU-73iyFMwrF3IXML4';
+// =============================================
+// SUPPLOXI V2 — Supabase Client & Shared Helpers
+// =============================================
 
-const { createClient } = supabase;
-window._supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Toast container
+const toastContainer = document.createElement('div')
+toastContainer.className = 'toast-container'
+document.body.appendChild(toastContainer)
 
-async function getCurrentUser() {
-  const { data: { session } } = await window._supabase.auth.getSession();
-  return session?.user || null;
+// Initialize Supabase
+const { createClient } = supabase
+window._sb = createClient(
+  'https://nmlnwcclgufxjkklqntl.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tbG53Y2NsZ3VmeGpra2xxbnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNzk3MDgsImV4cCI6MjA4Nzk1NTcwOH0.8z2qgjtqUJpd0qrG7DmFPHGokvU-73iyFMwrF3IXML4'
+)
+
+// =============================================
+// AUTH HELPERS
+// =============================================
+
+window.getUser = async () => {
+  const { data: { user } } = await window._sb.auth.getUser()
+  return user
 }
 
-async function requireAuth() {
-  const user = await getCurrentUser();
-  if (!user) {
-    window.location.href = '/index.html';
-    return null;
+window.requireAuth = async () => {
+  const user = await window.getUser()
+  if (!user) { window.location.href = '/' }
+  return user
+}
+
+window.signOut = async () => {
+  await window._sb.auth.signOut()
+  window.location.href = '/'
+}
+
+// =============================================
+// TOAST NOTIFICATIONS
+// =============================================
+
+window.showToast = (message, type = 'success') => {
+  const toast = document.createElement('div')
+  toast.className = `toast ${type}`
+  const icons = { success: '\u2713', error: '\u2715', warning: '\u26A0', info: '\u2139' }
+  toast.innerHTML = `<span style="font-size:18px">${icons[type] || '\u2139'}</span><span>${message}</span>`
+  toastContainer.appendChild(toast)
+  setTimeout(() => {
+    toast.style.animation = 'toastSlideIn 0.3s ease reverse'
+    setTimeout(() => toast.remove(), 280)
+  }, 3500)
+}
+
+// =============================================
+// FORMATTING HELPERS
+// =============================================
+
+window.formatCurrency = (val) => {
+  const num = parseFloat(val) || 0
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num)
+}
+
+window.formatDate = (d) => {
+  if (!d) return '\u2014'
+  return new Date(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+}
+
+window.formatRelativeTime = (d) => {
+  if (!d) return '\u2014'
+  const diff = Date.now() - new Date(d).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+window.escapeHtml = (str) => {
+  if (!str) return ''
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+// =============================================
+// STATUS BADGE GENERATOR
+// =============================================
+
+window.getStatusBadge = (status) => {
+  const map = {
+    active: ['badge-green', 'Active'],
+    inactive: ['badge-gray', 'Inactive'],
+    draft: ['badge-gray', 'Draft'],
+    sent: ['badge-blue', 'Sent'],
+    confirmed: ['badge-blue', 'Confirmed'],
+    in_production: ['badge-purple', 'In Production'],
+    shipped: ['badge-blue', 'Shipped'],
+    received: ['badge-green', 'Received'],
+    cancelled: ['badge-red', 'Cancelled'],
+    processing: ['badge-gray', 'Processing'],
+    in_transit: ['badge-blue', 'In Transit'],
+    customs: ['badge-orange', 'In Customs'],
+    out_for_delivery: ['badge-purple', 'Out for Delivery'],
+    delivered: ['badge-green', 'Delivered'],
+    exception: ['badge-red', 'Exception'],
+    pending: ['badge-orange', 'Pending'],
+    paid: ['badge-green', 'Paid'],
+    partial: ['badge-blue', 'Partial'],
+    on_hold: ['badge-orange', 'On Hold'],
   }
-  return user;
+  const [cls, label] = map[status] || ['badge-gray', status || 'Unknown']
+  return `<span class="badge ${cls}">${label}</span>`
 }
 
-async function signOut() {
-  await window._supabase.auth.signOut();
-  window.location.href = '/index.html';
-}
+// =============================================
+// PO NUMBER GENERATOR
+// =============================================
 
-// Helpers
-function formatCurrency(n) {
-  if (n == null) return '$0.00';
-  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function formatDate(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  return dt.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-}
-
-function daysBetween(a, b) {
-  const d1 = new Date(a), d2 = new Date(b);
-  return Math.ceil((d2 - d1) / 86400000);
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function showToast(msg, type) {
-  let t = document.getElementById('toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'toast';
-    document.body.appendChild(t);
-  }
-  t.textContent = msg;
-  t.className = 'toast show ' + (type || 'success');
-  setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-function countryFlag(code) {
-  const flags = { China: '🇨🇳', India: '🇮🇳', Vietnam: '🇻🇳', Bangladesh: '🇧🇩', Turkey: '🇹🇷', 'United States': '🇺🇸', USA: '🇺🇸', Other: '🌍' };
-  return flags[code] || '🌍';
-}
-
-function statusBadge(status) {
-  const colors = {
-    active: '#00d4aa', inactive: '#ff4757', 'on hold': '#f59e0b',
-    draft: '#8b8fa8', sent: '#3b82f6', confirmed: '#00d4aa', 'in production': '#f59e0b',
-    shipped: '#3b82f6', received: '#00d4aa', cancelled: '#ff4757',
-    pending: '#f59e0b', processing: '#3b82f6',
-    'in transit': '#3b82f6', customs: '#f59e0b', 'out for delivery': '#00d4aa',
-    delivered: '#00d4aa', exception: '#ff4757'
-  };
-  const c = colors[(status || '').toLowerCase()] || '#8b8fa8';
-  return `<span class="badge" style="background:${c}20;color:${c};border:1px solid ${c}40">${escapeHtml(status || 'N/A')}</span>`;
-}
-
-function calculateReorderSuggestion(product) {
-  const avgDaily = product.avg_daily_sales || 1;
-  const daysOfStockLeft = product.stock_quantity / avgDaily;
-  const totalLeadTime = (product.lead_time_days || 30) + 15;
-  const safetyBuffer = 7;
-  const reorderNow = daysOfStockLeft <= (totalLeadTime + safetyBuffer);
-  const suggestedQty = Math.ceil(avgDaily * totalLeadTime * 1.2);
-
-  return {
-    reorderNow,
-    daysUntilStockout: Math.floor(daysOfStockLeft),
-    suggestedQty,
-    urgency: daysOfStockLeft < totalLeadTime ? 'critical' :
-             daysOfStockLeft < totalLeadTime + 14 ? 'soon' : 'ok'
-  };
+window.generatePONumber = () => {
+  const year = new Date().getFullYear()
+  const rand = String(Math.floor(Math.random() * 9000) + 1000)
+  return `PO-${year}-${rand}`
 }
