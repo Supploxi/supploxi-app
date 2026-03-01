@@ -4,932 +4,218 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Supploxi — Shipment Detail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="/js/supabase-client.js"></script>
-  <script src="/js/layout.js"></script>
   <style>
-    .detail-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 28px;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .detail-header-left h2 {
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: -.02em;
-      margin-bottom: 8px;
-    }
-
-    .detail-header-left .header-meta {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: .85rem;
-      color: var(--text-muted);
-    }
-
-    .detail-header-left .header-meta .carrier-name {
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .detail-header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .info-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
-      transition: border-color .15s;
-    }
-    .info-card:hover { border-color: var(--border-light); }
-
-    .info-card .info-label {
-      font-size: .7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-
-    .info-card .info-value {
-      font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: -.02em;
-      color: var(--text);
-    }
-
-    .linked-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    @media (max-width: 768px) {
-      .linked-grid { grid-template-columns: 1fr; }
-    }
-
-    .linked-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-
-    .linked-card-header {
-      padding: 16px 22px;
-      border-bottom: 1px solid var(--border);
-      font-size: .95rem;
-      font-weight: 700;
-    }
-
-    .linked-card-body {
-      padding: 20px 22px;
-    }
-
-    .linked-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0;
-      font-size: .85rem;
-    }
-
-    .linked-row .linked-label {
-      color: var(--text-muted);
-    }
-
-    .linked-row .linked-value {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    .linked-row .linked-value a {
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .linked-row .linked-value a:hover { text-decoration: underline; }
-
-    .no-linked {
-      text-align: center;
-      padding: 28px 0;
-      color: var(--text-dim);
-      font-size: .85rem;
-    }
-
-    .cost-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 0;
-      font-size: .85rem;
-    }
-
-    .cost-row .cost-label {
-      color: var(--text-muted);
-    }
-
-    .cost-row .cost-value {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    .cost-divider {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 8px 0;
-    }
-
-    .cost-total .cost-label {
-      color: var(--text) !important;
-      font-weight: 700;
-      font-size: .9rem;
-    }
-
-    .cost-total .cost-value {
-      color: var(--primary) !important;
-      font-weight: 800;
-      font-size: 1.1rem;
-    }
-
-    .event-form {
-      display: none;
-      padding: 18px 22px;
-      border-top: 1px solid var(--border);
-      background: rgba(255,255,255,.02);
-    }
-
-    .event-form.show { display: block; }
-
-    .event-form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    @media (max-width: 600px) {
-      .event-form-grid { grid-template-columns: 1fr; }
-    }
-
-    .empty-timeline {
-      text-align: center;
-      padding: 32px 22px;
-      color: var(--text-dim);
-    }
-
-    .empty-timeline p {
-      font-size: .9rem;
-      color: var(--text-muted);
-      margin-bottom: 14px;
-    }
-
-    .tracking-meta {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .last-updated {
-      font-size: .75rem;
-      color: var(--text-dim);
-      font-weight: 500;
-    }
-
-    .btn-refresh {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: .75rem;
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: rgba(59,130,246,.12);
-      color: #3b82f6;
-      border: 1px solid rgba(59,130,246,.25);
-      cursor: pointer;
-      font-weight: 600;
-      transition: all .15s;
-    }
-    .btn-refresh:hover { background: rgba(59,130,246,.2); }
-    .btn-refresh:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-refresh .spin { animation: spin 1s linear infinite; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-    .badge-auto-track-lg {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: .75rem;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: rgba(0,212,170,.12);
-      color: #00d4aa;
-      border: 1px solid rgba(0,212,170,.25);
-    }
-
-    .status-change-banner {
-      display: none;
-      background: rgba(0,212,170,.1);
-      border: 1px solid rgba(0,212,170,.3);
-      border-radius: 10px;
-      padding: 14px 20px;
-      margin-bottom: 20px;
-      font-size: .85rem;
-      color: #00d4aa;
-      font-weight: 600;
-      align-items: center;
-      gap: 8px;
-    }
-    .status-change-banner.show { display: flex; }
-
-    .event-source-tag {
-      font-size: .6rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      padding: 1px 5px;
-      border-radius: 4px;
-      margin-left: 6px;
-    }
-    .event-source-tag.auto {
-      background: rgba(59,130,246,.15);
-      color: #3b82f6;
-    }
-    .event-source-tag.manual {
-      background: rgba(139,143,168,.15);
-      color: #8b8fa8;
-    }
+    .tracking-timeline { display:flex; flex-direction:column; gap:0; }
+    .timeline-item { display:flex; gap:16px; position:relative; padding-bottom:20px; }
+    .timeline-item:last-child { padding-bottom:0; }
+    .timeline-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; margin-top:4px; z-index:1; }
+    .timeline-line { position:absolute; left:5px; top:16px; bottom:0; width:2px; background:var(--border); }
+    .timeline-item:last-child .timeline-line { display:none; }
+    .timeline-item.latest .timeline-dot { width:16px; height:16px; margin-top:2px; margin-left:-2px; box-shadow:0 0 0 4px var(--green-dim); }
   </style>
 </head>
 <body>
-
-  <div class="main" id="mainContent">
-    <div class="loading" id="loadingState">
-      <div class="spinner"></div> Loading shipment...
-    </div>
-
-    <div id="detailContent" style="display:none">
-
-      <!-- Page Header -->
-      <div class="detail-header">
-        <div class="detail-header-left">
-          <h2 id="trackingTitle">--</h2>
-          <div class="header-meta">
-            <span class="carrier-name" id="carrierName">--</span>
-            <span id="statusBadgeEl"></span>
-            <span class="badge-auto-track-lg" id="autoTrackBadge" style="display:none">&#9679; Auto-tracking enabled</span>
-          </div>
-        </div>
-        <div class="detail-header-right">
-          <a href="/shipments.html" class="btn btn-secondary">Back to Shipments</a>
-          <button class="btn btn-primary btn-sm" id="btnAdvanceStatus" style="display:none" onclick="advanceStatus()">--</button>
-        </div>
+  <div class="main-content">
+    <div class="page-content">
+      <div id="shipment-content">
+        <div class="empty-state"><div class="spinner"></div><p style="margin-top:12px">Loading shipment...</p></div>
       </div>
-
-      <!-- Status Change Banner -->
-      <div class="status-change-banner" id="statusChangeBanner">
-        &#x1F514; Status updated automatically via 17Track
-      </div>
-
-      <!-- Shipment Progress Bar -->
-      <div class="section" style="margin-bottom:24px">
-        <div class="ship-progress" id="shipProgress">
-          <div class="ship-step" data-step="processing">
-            <div class="ship-dot">&#x1F4E6;</div>
-            <div class="ship-label">Processing</div>
-          </div>
-          <div class="ship-step" data-step="in transit">
-            <div class="ship-dot">&#x1F6A2;</div>
-            <div class="ship-label">In Transit</div>
-          </div>
-          <div class="ship-step" data-step="customs">
-            <div class="ship-dot">&#x1F6C3;</div>
-            <div class="ship-label">Customs</div>
-          </div>
-          <div class="ship-step" data-step="out for delivery">
-            <div class="ship-dot">&#x1F69A;</div>
-            <div class="ship-label">Out for Delivery</div>
-          </div>
-          <div class="ship-step" data-step="delivered">
-            <div class="ship-dot">&#x2705;</div>
-            <div class="ship-label">Delivered</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Info Stat Cards -->
-      <div class="info-grid" id="infoGrid">
-        <div class="info-card">
-          <div class="info-label">Ship Date</div>
-          <div class="info-value" id="infoShipDate">--</div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">ETA</div>
-          <div class="info-value" id="infoETA">--</div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">Days in Transit</div>
-          <div class="info-value" id="infoDays">--</div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">Weight</div>
-          <div class="info-value" id="infoWeight">--</div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">Packages</div>
-          <div class="info-value" id="infoPackages">--</div>
-        </div>
-      </div>
-
-      <!-- Tracking Timeline -->
-      <div class="section" id="timelineSection">
-        <div class="section-header">
-          <div>
-            <h3 style="margin-bottom:4px">Tracking Timeline</h3>
-            <div class="tracking-meta">
-              <span class="last-updated" id="lastUpdatedText"></span>
-              <button class="btn-refresh" id="btnRefreshTracking" onclick="refreshTracking()" style="display:none">
-                <span id="refreshIcon">&#x21bb;</span> Refresh Now
-              </button>
-            </div>
-          </div>
-          <button class="btn btn-sm btn-secondary" id="btnToggleEventForm" onclick="toggleEventForm()">+ Add Event</button>
-        </div>
-        <div class="event-form" id="eventForm">
-          <div class="event-form-grid">
-            <div class="form-group" style="margin-bottom:0">
-              <label for="eventDate">Date &amp; Time</label>
-              <input type="datetime-local" class="form-control" id="eventDate">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label for="eventLocation">Location</label>
-              <input type="text" class="form-control" id="eventLocation" placeholder="e.g. Shanghai Port">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label for="eventDescription">Description</label>
-              <input type="text" class="form-control" id="eventDescription" placeholder="e.g. Departed warehouse">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label for="eventStatus">Status</label>
-              <select class="form-control" id="eventStatus">
-                <option value="Processing">Processing</option>
-                <option value="In Transit">In Transit</option>
-                <option value="Customs">Customs</option>
-                <option value="Out for Delivery">Out for Delivery</option>
-                <option value="Delivered">Delivered</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="addTrackingEvent()">Add</button>
-          <button class="btn btn-secondary btn-sm" onclick="toggleEventForm()" style="margin-left:6px">Cancel</button>
-        </div>
-        <div class="timeline" id="timelineBody">
-          <div class="loading"><div class="spinner"></div> Loading events...</div>
-        </div>
-      </div>
-
-      <!-- Linked Order & Supplier -->
-      <div class="linked-grid">
-        <div class="linked-card">
-          <div class="linked-card-header">Linked Purchase Order</div>
-          <div class="linked-card-body" id="linkedPO">
-            <div class="no-linked">Loading...</div>
-          </div>
-        </div>
-        <div class="linked-card">
-          <div class="linked-card-header">Linked Supplier</div>
-          <div class="linked-card-body" id="linkedSupplier">
-            <div class="no-linked">Loading...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Cost Breakdown -->
-      <div class="section" style="padding:22px">
-        <div style="margin-bottom:16px;font-size:.95rem;font-weight:700;">Cost Breakdown</div>
-        <div id="costBreakdown">
-          <div class="cost-row">
-            <span class="cost-label">Shipping Cost</span>
-            <span class="cost-value" id="costShipping">$0.00</span>
-          </div>
-          <div class="cost-row">
-            <span class="cost-label">Insurance</span>
-            <span class="cost-value" id="costInsurance">$0.00</span>
-          </div>
-          <div class="cost-row">
-            <span class="cost-label">Customs Duty</span>
-            <span class="cost-value" id="costCustoms">$0.00</span>
-          </div>
-          <hr class="cost-divider">
-          <div class="cost-row cost-total">
-            <span class="cost-label">Total Landed Cost</span>
-            <span class="cost-value" id="costTotal">$0.00</span>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script src="/js/layout.js"></script>
   <script>
-    let currentUser = null;
-    let shipment = null;
-    let shipmentId = null;
+    const shipId = new URLSearchParams(location.search).get('id')
+    let shipment = null
 
-    const STATUS_ORDER = ['processing', 'in transit', 'customs', 'out for delivery', 'delivered'];
+    const PROGRESS_STEPS = [
+      { key: 'processing', icon: '📦', label: 'Processed' },
+      { key: 'in_transit', icon: '✈️', label: 'In Transit' },
+      { key: 'customs', icon: '🛃', label: 'Customs' },
+      { key: 'out_for_delivery', icon: '🚚', label: 'Out for Delivery' },
+      { key: 'delivered', icon: '✅', label: 'Delivered' }
+    ]
 
-    async function init() {
-      currentUser = await requireAuth();
-      if (!currentUser) return;
+    async function load() {
+      const user = await window.requireAuth()
+      await window.initLayout({ page: 'shipments', title: 'Shipment Detail' })
+      if (!shipId) { window.location.href = '/shipments.html'; return }
 
-      renderLayout('shipments');
+      const { data: s } = await window._sb.from('shipments').select('*, suppliers(company_name), purchase_orders(po_number)').eq('id', shipId).eq('user_id', user.id).single()
+      if (!s) { window.location.href = '/shipments.html'; return }
+      shipment = s
 
-      const params = new URLSearchParams(window.location.search);
-      shipmentId = params.get('id');
-
-      if (!shipmentId) {
-        document.getElementById('loadingState').innerHTML =
-          '<div class="empty-state"><p>No shipment ID provided</p><small><a href="/shipments.html" style="color:var(--primary)">Back to Shipments</a></small></div>';
-        return;
-      }
-
-      await loadShipment();
-    }
-
-    // ---- Load Shipment ----
-
-    async function loadShipment() {
-      const { data, error } = await window._supabase
-        .from('shipments')
-        .select('*, suppliers(id, company_name, country, email, phone), purchase_orders(id, po_number, order_date, total_value, status)')
-        .eq('id', shipmentId)
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if (error || !data) {
-        document.getElementById('loadingState').innerHTML =
-          '<div class="empty-state"><p>Shipment not found</p><small><a href="/shipments.html" style="color:var(--primary)">Back to Shipments</a></small></div>';
-        return;
-      }
-
-      shipment = data;
-
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('detailContent').style.display = 'block';
-
-      renderHeader();
-      renderProgress();
-      renderInfoCards();
-      renderLinkedCards();
-      renderCostBreakdown();
-      await loadTrackingEvents();
-    }
-
-    // ---- Header ----
-
-    function renderHeader() {
-      document.getElementById('trackingTitle').textContent = shipment.tracking_number || 'No Tracking Number';
-      document.getElementById('carrierName').textContent = shipment.carrier || 'Unknown Carrier';
-      document.getElementById('statusBadgeEl').innerHTML = statusBadge(shipment.status);
-
-      // Show auto-tracking badge if registered
-      if (shipment.track17_registered) {
-        document.getElementById('autoTrackBadge').style.display = 'inline-flex';
-        document.getElementById('btnRefreshTracking').style.display = 'inline-flex';
-      }
-
-      // Show last updated time
-      if (shipment.last_tracking_update) {
-        const updated = new Date(shipment.last_tracking_update);
-        const diffMs = Date.now() - updated.getTime();
-        const mins = Math.floor(diffMs / 60000);
-        let timeText;
-        if (mins < 1) timeText = 'just now';
-        else if (mins < 60) timeText = mins + ' min ago';
-        else if (mins < 1440) timeText = Math.floor(mins / 60) + 'h ago';
-        else timeText = Math.floor(mins / 1440) + 'd ago';
-        document.getElementById('lastUpdatedText').textContent = 'Last updated: ' + timeText;
-      }
-
-      // Set page title
-      document.title = 'Supploxi — ' + (shipment.tracking_number || 'Shipment');
-
-      // Show advance status button if not yet delivered
-      const currentIdx = STATUS_ORDER.indexOf((shipment.status || '').toLowerCase());
-      if (currentIdx >= 0 && currentIdx < STATUS_ORDER.length - 1) {
-        const nextStatus = STATUS_ORDER[currentIdx + 1];
-        const btn = document.getElementById('btnAdvanceStatus');
-        btn.style.display = 'inline-flex';
-        btn.textContent = 'Mark as ' + capitalizeStatus(nextStatus);
-      } else {
-        document.getElementById('btnAdvanceStatus').style.display = 'none';
-      }
-    }
-
-    function capitalizeStatus(s) {
-      return s.replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    // ---- Advance Status ----
-
-    async function advanceStatus() {
-      const currentIdx = STATUS_ORDER.indexOf((shipment.status || '').toLowerCase());
-      if (currentIdx < 0 || currentIdx >= STATUS_ORDER.length - 1) return;
-
-      const nextStatus = capitalizeStatus(STATUS_ORDER[currentIdx + 1]);
-
-      const btn = document.getElementById('btnAdvanceStatus');
-      btn.disabled = true;
-      btn.textContent = 'Updating...';
-
-      const updateData = { status: nextStatus };
-
-      // If moving to delivered, set actual_arrival
-      if (nextStatus.toLowerCase() === 'delivered') {
-        updateData.actual_arrival = new Date().toISOString().split('T')[0];
-      }
-
-      const { error } = await window._supabase
-        .from('shipments')
-        .update(updateData)
-        .eq('id', shipmentId)
-        .eq('user_id', currentUser.id);
-
-      btn.disabled = false;
-
-      if (error) {
-        showToast('Failed to update status: ' + error.message, 'error');
-        btn.textContent = 'Mark as ' + nextStatus;
-        return;
-      }
-
-      shipment.status = nextStatus;
-      if (updateData.actual_arrival) {
-        shipment.actual_arrival = updateData.actual_arrival;
-      }
-
-      showToast('Status updated to ' + nextStatus, 'success');
-      renderHeader();
-      renderProgress();
-      renderInfoCards();
-    }
-
-    // ---- Progress Bar ----
-
-    function renderProgress() {
-      const steps = document.querySelectorAll('#shipProgress .ship-step');
-      const currentStatus = (shipment.status || '').toLowerCase();
-      const currentIdx = STATUS_ORDER.indexOf(currentStatus);
-
-      steps.forEach((step, i) => {
-        step.classList.remove('done', 'active');
-        if (currentIdx >= 0) {
-          if (i < currentIdx) {
-            step.classList.add('done');
-          } else if (i === currentIdx) {
-            step.classList.add('active');
-          }
+      // Atualiza days_in_transit
+      if (s.ship_date) {
+        const days = Math.floor((new Date() - new Date(s.ship_date)) / 86400000)
+        if (days !== s.days_in_transit) {
+          await window._sb.from('shipments').update({ days_in_transit: days }).eq('id', shipId)
+          shipment.days_in_transit = days
         }
-      });
+      }
+
+      const { data: events } = await window._sb.from('tracking_events').select('*').eq('shipment_id', shipId).order('event_time', { ascending: false })
+
+      render(events || [])
     }
 
-    // ---- Info Cards ----
+    function render(events) {
+      const s = shipment
+      const stepIdx = PROGRESS_STEPS.findIndex(p => p.key === s.status)
+      const totalCost = (s.shipping_cost||0) + (s.insurance_cost||0) + (s.customs_duty||0)
+      const lastSync = s.last_synced_at ? window.formatRelativeTime(s.last_synced_at) : 'Never'
 
-    function renderInfoCards() {
-      document.getElementById('infoShipDate').textContent = formatDate(shipment.ship_date);
-      document.getElementById('infoETA').textContent = formatDate(shipment.estimated_arrival);
+      const progressHtml = PROGRESS_STEPS.map((step, i) => `
+        <div class="progress-step ${i < stepIdx ? 'done' : i === stepIdx ? 'active' : ''}">
+          ${i < PROGRESS_STEPS.length - 1 ? '<div class="progress-step-line"></div>' : ''}
+          <div class="progress-step-dot">${i <= stepIdx ? step.icon : i + 1}</div>
+          <div class="progress-step-label">${step.label}</div>
+        </div>`).join('')
 
-      // Days in transit
-      if (shipment.ship_date) {
-        const statusLower = (shipment.status || '').toLowerCase();
-        let endDate;
-        if (statusLower === 'delivered' && shipment.actual_arrival) {
-          endDate = shipment.actual_arrival;
-        } else {
-          endDate = new Date().toISOString().split('T')[0];
-        }
-        const days = Math.max(0, daysBetween(shipment.ship_date, endDate));
-        document.getElementById('infoDays').textContent = days;
-      } else {
-        document.getElementById('infoDays').textContent = '--';
-      }
-
-      document.getElementById('infoWeight').textContent =
-        shipment.weight_kg != null ? shipment.weight_kg + ' kg' : '--';
-
-      document.getElementById('infoPackages').textContent =
-        shipment.num_packages != null ? shipment.num_packages : '--';
-    }
-
-    // ---- Tracking Timeline ----
-
-    async function loadTrackingEvents() {
-      const { data, error } = await window._supabase
-        .from('tracking_events')
-        .select('*')
-        .eq('shipment_id', shipmentId)
-        .order('event_date', { ascending: false });
-
-      const container = document.getElementById('timelineBody');
-
-      if (error) {
-        container.innerHTML = '<div class="empty-timeline"><p>Error loading tracking events</p></div>';
-        return;
-      }
-
-      const events = data || [];
-
-      if (events.length === 0) {
-        container.innerHTML = `
-          <div class="empty-timeline">
-            <p>No tracking events yet</p>
-            <button class="btn btn-primary btn-sm" onclick="toggleEventForm()">+ Add Event</button>
-          </div>`;
-        return;
-      }
-
-      container.innerHTML = events.map(ev => {
-        const evDate = ev.event_date
-          ? new Date(ev.event_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-          : '--';
-        return `
-          <div class="timeline-item">
-            <div>
-              <div class="tl-date">${escapeHtml(evDate)}</div>
-              <div class="tl-desc">${escapeHtml(ev.description || 'No description')}</div>
-              <div class="tl-loc">${escapeHtml(ev.location || '')}</div>
+      const timelineHtml = events.length ? events.map((ev, i) => `
+        <div class="timeline-item ${i===0?'latest':''}">
+          <div class="timeline-line"></div>
+          <div class="timeline-dot" style="background:${i===0?'var(--green)':s.status==='exception'?'var(--red)':'var(--border-light)'}"></div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:${i===0?'600':'400'}">${window.escapeHtml(ev.description||'Status update')}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+              ${ev.location ? `📍 ${window.escapeHtml(ev.location)} · ` : ''}
+              ${ev.event_time ? new Date(ev.event_time).toLocaleString('en-US') : ''}
             </div>
-          </div>`;
-      }).join('');
+          </div>
+        </div>`).join('') :
+        `<div class="empty-state" style="padding:20px"><p>No tracking events yet. Auto-sync runs every 6 hours.</p></div>`
+
+      document.getElementById('shipment-content').innerHTML = `
+        <!-- HEADER -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:gap">
+          <div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <h1 style="font-size:20px;font-weight:700;font-family:monospace">${window.escapeHtml(s.tracking_number)}</h1>
+              ${window.getStatusBadge(s.status)}
+            </div>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:4px">
+              ${window.escapeHtml(s.suppliers?.company_name||'—')} · Last updated: ${lastSync}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="window.location.href='/shipments.html'">← Back</button>
+            <button class="btn btn-secondary" onclick="refreshTracking()" id="refresh-btn">🔄 Refresh Tracking</button>
+          </div>
+        </div>
+
+        <!-- PROGRESS -->
+        <div class="card" style="margin-bottom:24px">
+          <div class="shipment-progress">${progressHtml}</div>
+        </div>
+
+        <!-- INFO CARDS -->
+        <div class="stats-grid" style="margin-bottom:24px">
+          <div class="stat-card"><div class="stat-label">Ship Date</div><div class="stat-value" style="font-size:18px">${window.formatDate(s.ship_date)}</div></div>
+          <div class="stat-card"><div class="stat-label">Est. Arrival</div><div class="stat-value" style="font-size:18px">${window.formatDate(s.estimated_arrival)}</div></div>
+          <div class="stat-card"><div class="stat-label">Days in Transit</div><div class="stat-value">${s.days_in_transit||0}<span style="font-size:14px;font-weight:400"> days</span></div></div>
+          <div class="stat-card"><div class="stat-label">Packages / Weight</div><div class="stat-value" style="font-size:18px">${s.num_packages||1} pkg${s.weight_kg?` / ${s.weight_kg}kg`:''}</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:24px">
+          <!-- TIMELINE -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">📍 Tracking Timeline</span>
+              <span style="font-size:12px;color:var(--green)">🤖 Auto-updates every 6h</span>
+            </div>
+            <div class="tracking-timeline">${timelineHtml}</div>
+          </div>
+
+          <!-- SIDEBAR -->
+          <div>
+            <!-- COSTS -->
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title" style="margin-bottom:16px">💰 Cost Breakdown</div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Shipping</span><strong>${window.formatCurrency(s.shipping_cost||0)}</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Insurance</span><strong>${window.formatCurrency(s.insurance_cost||0)}</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Customs Duty</span><strong style="color:${(s.customs_duty||0)>0?'var(--orange)':'inherit'}">${window.formatCurrency(s.customs_duty||0)}</strong></div>
+                <div style="height:1px;background:var(--border);margin:4px 0"></div>
+                <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Total</span><strong style="color:var(--green)">${window.formatCurrency(totalCost)}</strong></div>
+              </div>
+              ${s.customs_status ? `<div style="margin-top:12px;padding:8px;background:var(--orange-dim);border-radius:var(--radius-sm);font-size:12px;color:var(--orange)">🛃 Customs: ${window.escapeHtml(s.customs_status)}</div>` : ''}
+            </div>
+
+            <!-- DETAILS -->
+            <div class="card">
+              <div class="card-title" style="margin-bottom:16px">Details</div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Carrier</span><strong>${window.escapeHtml(s.carrier_detected||s.carrier||'Auto')}</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Method</span><strong>${window.escapeHtml(s.shipping_method||'—')}</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Origin</span><strong>${window.getCountryFlag(s.origin_country||'CN')} ${s.origin_country||'CN'}</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Destination</span><strong>${window.getCountryFlag('US')} US${s.destination_state?' ('+s.destination_state+')':''}</strong></div>
+                ${s.purchase_orders ? `<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Linked PO</span><a href="/po-detail.html?id=${s.po_id}" style="color:var(--green)">${s.purchase_orders.po_number}</a></div>` : ''}
+              </div>
+              ${s.notes ? `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;font-size:12px;color:var(--text-muted)">${window.escapeHtml(s.notes)}</div>` : ''}
+            </div>
+          </div>
+        </div>`
     }
-
-    function toggleEventForm() {
-      const form = document.getElementById('eventForm');
-      form.classList.toggle('show');
-
-      // Set default date to now
-      if (form.classList.contains('show')) {
-        const now = new Date();
-        const offset = now.getTimezoneOffset() * 60000;
-        const local = new Date(now - offset);
-        document.getElementById('eventDate').value = local.toISOString().slice(0, 16);
-      }
-    }
-
-    async function addTrackingEvent() {
-      const eventDate = document.getElementById('eventDate').value;
-      const location = document.getElementById('eventLocation').value.trim();
-      const description = document.getElementById('eventDescription').value.trim();
-      const status = document.getElementById('eventStatus').value;
-
-      if (!eventDate || !description) {
-        showToast('Please provide at least a date and description', 'error');
-        return;
-      }
-
-      const { error } = await window._supabase
-        .from('tracking_events')
-        .insert({
-          shipment_id: shipmentId,
-          event_date: eventDate,
-          location: location || null,
-          description: description,
-          status: status
-        });
-
-      if (error) {
-        showToast('Failed to add event: ' + error.message, 'error');
-        return;
-      }
-
-      showToast('Tracking event added', 'success');
-
-      // Reset form fields
-      document.getElementById('eventLocation').value = '';
-      document.getElementById('eventDescription').value = '';
-      document.getElementById('eventForm').classList.remove('show');
-
-      await loadTrackingEvents();
-    }
-
-    // ---- Linked Order & Supplier ----
-
-    function renderLinkedCards() {
-      // Purchase Order card
-      const poContainer = document.getElementById('linkedPO');
-      if (shipment.purchase_orders && shipment.purchase_orders.po_number) {
-        const po = shipment.purchase_orders;
-        poContainer.innerHTML = `
-          <div class="linked-row">
-            <span class="linked-label">PO Number</span>
-            <span class="linked-value"><a href="/po-detail.html?id=${escapeHtml(po.id)}">${escapeHtml(po.po_number)}</a></span>
-          </div>
-          <div class="linked-row">
-            <span class="linked-label">Order Date</span>
-            <span class="linked-value">${formatDate(po.order_date)}</span>
-          </div>
-          <div class="linked-row">
-            <span class="linked-label">Total Value</span>
-            <span class="linked-value">${formatCurrency(po.total_value)}</span>
-          </div>
-          <div class="linked-row">
-            <span class="linked-label">Status</span>
-            <span class="linked-value">${statusBadge(po.status)}</span>
-          </div>`;
-      } else {
-        poContainer.innerHTML = '<div class="no-linked">No PO linked</div>';
-      }
-
-      // Supplier card
-      const supplierContainer = document.getElementById('linkedSupplier');
-      if (shipment.suppliers && shipment.suppliers.company_name) {
-        const sup = shipment.suppliers;
-        const flag = typeof countryFlag === 'function' ? countryFlag(sup.country) : '';
-        supplierContainer.innerHTML = `
-          <div class="linked-row">
-            <span class="linked-label">Company</span>
-            <span class="linked-value"><a href="/suppliers-detail.html?id=${escapeHtml(sup.id)}">${escapeHtml(sup.company_name)}</a></span>
-          </div>
-          <div class="linked-row">
-            <span class="linked-label">Country</span>
-            <span class="linked-value">${flag} ${escapeHtml(sup.country || '--')}</span>
-          </div>
-          <div class="linked-row">
-            <span class="linked-label">Email</span>
-            <span class="linked-value">${escapeHtml(sup.email || '--')}</span>
-          </div>
-          <div class="linked-row">
-            <span class="linked-label">Phone</span>
-            <span class="linked-value">${escapeHtml(sup.phone || '--')}</span>
-          </div>`;
-      } else {
-        supplierContainer.innerHTML = '<div class="no-linked">No supplier linked</div>';
-      }
-    }
-
-    // ---- Cost Breakdown ----
-
-    function renderCostBreakdown() {
-      const shipping = Number(shipment.shipping_cost) || 0;
-      const insurance = Number(shipment.insurance_cost) || 0;
-      const customs = Number(shipment.customs_duty) || 0;
-      const total = shipping + insurance + customs;
-
-      document.getElementById('costShipping').textContent = formatCurrency(shipping);
-      document.getElementById('costInsurance').textContent = formatCurrency(insurance);
-      document.getElementById('costCustoms').textContent = formatCurrency(customs);
-      document.getElementById('costTotal').textContent = formatCurrency(total);
-    }
-
-    // ---- Refresh Tracking (17Track) ----
 
     async function refreshTracking() {
-      const btn = document.getElementById('btnRefreshTracking');
-      const icon = document.getElementById('refreshIcon');
-      btn.disabled = true;
-      icon.classList.add('spin');
-
+      const btn = document.getElementById('refresh-btn')
+      btn.textContent = '⏳ Refreshing...'
+      btn.disabled = true
       try {
-        const { data: { session } } = await window._supabase.auth.getSession();
-        if (!session) return;
-
-        const res = await fetch('/api/tracking/sync-one', {
+        const res = await fetch('/api/tracking/getinfo', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + session.access_token,
-          },
-          body: JSON.stringify({ shipment_id: shipmentId }),
-        });
-
-        const result = await res.json();
-
-        if (result.synced > 0) {
-          // Reload shipment data to get updated status
-          const oldStatus = (shipment.status || '').toLowerCase();
-
-          const { data: updated } = await window._supabase
-            .from('shipments')
-            .select('*, suppliers(id, company_name, country, email, phone), purchase_orders(id, po_number, order_date, total_value, status)')
-            .eq('id', shipmentId)
-            .eq('user_id', currentUser.id)
-            .single();
-
-          if (updated) {
-            shipment = updated;
-            renderHeader();
-            renderProgress();
-            renderInfoCards();
-            await loadTrackingEvents();
-
-            const newStatus = (shipment.status || '').toLowerCase();
-            if (newStatus !== oldStatus) {
-              const banner = document.getElementById('statusChangeBanner');
-              banner.classList.add('show');
-              setTimeout(() => banner.classList.remove('show'), 8000);
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ numbers: [shipment.tracking_number] })
+        })
+        const data = await res.json()
+        const accepted = data?.data?.accepted
+        if (accepted?.length > 0) {
+          const track = accepted[0]
+          const tag = track.track?.z0?.z
+          if (tag) {
+            const newStatus = window.map17TrackStatus(tag)
+            const events = track.track?.z1 || []
+            // Salva eventos no banco
+            if (events.length > 0) {
+              await window._sb.from('tracking_events').delete().eq('shipment_id', shipId)
+              await window._sb.from('tracking_events').insert(events.map(ev => ({
+                shipment_id: shipId,
+                event_time: ev.a ? new Date(ev.a).toISOString() : new Date().toISOString(),
+                location: ev.c || '',
+                description: ev.z || '',
+                status_code: tag
+              })))
             }
-
-            showToast('Tracking updated', 'success');
+            const lastEvent = events[0]
+            await window._sb.from('shipments').update({
+              status: newStatus,
+              last_event: lastEvent?.z || '',
+              last_event_location: lastEvent?.c || '',
+              last_synced_at: new Date().toISOString()
+            }).eq('id', shipId)
+            window.showToast('Tracking updated!', 'success')
+          } else {
+            await window._sb.from('shipments').update({ last_synced_at: new Date().toISOString() }).eq('id', shipId)
+            window.showToast('No new events yet. Try again later.', 'info')
           }
         } else {
-          showToast('No new updates available', 'info');
+          window.showToast('Tracking number not found in 17Track yet.', 'warning')
         }
-      } catch (err) {
-        console.error('Refresh tracking error:', err);
-        showToast('Failed to refresh tracking', 'error');
-      } finally {
-        btn.disabled = false;
-        icon.classList.remove('spin');
+      } catch(e) {
+        window.showToast('Error refreshing: ' + e.message, 'error')
       }
+      btn.textContent = '🔄 Refresh Tracking'
+      btn.disabled = false
+      await load()
     }
 
-    // Auto-sync on page load if auto-tracking is enabled
-    async function autoSyncOnLoad() {
-      if (!shipment || !shipment.track17_registered) return;
-
-      // Only auto-sync if last update was > 30 minutes ago
-      if (shipment.last_tracking_update) {
-        const diffMs = Date.now() - new Date(shipment.last_tracking_update).getTime();
-        if (diffMs < 30 * 60 * 1000) return;
-      }
-
-      await refreshTracking();
-    }
-
-    // ---- Tracking Events Render (updated for source tags) ----
-
-    const _originalLoadTrackingEvents = loadTrackingEvents;
-    loadTrackingEvents = async function() {
-      const { data, error } = await window._supabase
-        .from('tracking_events')
-        .select('*')
-        .eq('shipment_id', shipmentId)
-        .order('event_date', { ascending: false });
-
-      const container = document.getElementById('timelineBody');
-
-      if (error) {
-        container.innerHTML = '<div class="empty-timeline"><p>Error loading tracking events</p></div>';
-        return;
-      }
-
-      const events = data || [];
-
-      if (events.length === 0) {
-        container.innerHTML = `
-          <div class="empty-timeline">
-            <p>No tracking events yet</p>
-            <button class="btn btn-primary btn-sm" onclick="toggleEventForm()">+ Add Event</button>
-          </div>`;
-        return;
-      }
-
-      container.innerHTML = events.map(ev => {
-        const evDate = ev.event_date
-          ? new Date(ev.event_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-          : '--';
-        const sourceTag = ev.source === '17track'
-          ? '<span class="event-source-tag auto">17Track</span>'
-          : '<span class="event-source-tag manual">Manual</span>';
-        return `
-          <div class="timeline-item">
-            <div>
-              <div class="tl-date">${escapeHtml(evDate)}${sourceTag}</div>
-              <div class="tl-desc">${escapeHtml(ev.description || 'No description')}</div>
-              <div class="tl-loc">${escapeHtml(ev.location || '')}</div>
-            </div>
-          </div>`;
-      }).join('');
-    };
-
-    // ---- Init ----
-    init().then(() => {
-      // After page loads, auto-sync in background
-      setTimeout(autoSyncOnLoad, 1000);
-    });
+    load()
   </script>
 </body>
 </html>

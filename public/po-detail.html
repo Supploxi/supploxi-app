@@ -3,808 +3,358 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Supploxi — Purchase Order Detail</title>
+  <title>Supploxi — PO Detail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="/js/supabase-client.js"></script>
-  <script src="/js/layout.js"></script>
   <style>
-    .detail-header {
-      margin-bottom: 28px;
-    }
-
-    .detail-header h2 {
-      font-size: 1.5rem;
-      font-weight: 800;
-      letter-spacing: -.03em;
-      margin-bottom: 4px;
-    }
-
-    .detail-header .supplier-name {
-      font-size: .9rem;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-
-    .detail-header .status-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .actions-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: .85rem;
-      font-weight: 500;
-      transition: color .15s;
-    }
-
-    .back-link:hover {
-      color: var(--text);
-    }
-
-    .back-link svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    .table-responsive {
-      overflow-x: auto;
-    }
-
-    .add-item-row {
-      display: none;
-      padding: 14px 22px;
-      border-top: 1px solid var(--border);
-    }
-
-    .add-item-row.show {
-      display: block;
-    }
-
-    .add-item-form {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr auto;
-      gap: 10px;
-      align-items: end;
-    }
-
-    .add-item-form .form-group {
-      margin-bottom: 0;
-    }
-
-    .add-item-form .form-group label {
-      font-size: .7rem;
-      margin-bottom: 4px;
-    }
-
-    .confirm-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.6);
-      backdrop-filter: blur(4px);
-      z-index: 600;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .confirm-overlay.show {
-      display: flex;
-    }
-
-    .confirm-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 28px;
-      max-width: 420px;
-      width: 90%;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,.5);
-    }
-
-    .confirm-box h4 {
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .confirm-box p {
-      font-size: .85rem;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-    }
-
-    .confirm-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-    }
-
-    .timeline-item.future::before {
-      background: var(--border);
-    }
-
-    .timeline-item.reached::before {
-      background: var(--primary);
-    }
-
-    .days-overdue {
-      color: var(--danger);
-      font-weight: 700;
-    }
-
-    .days-remaining {
-      color: var(--primary);
-      font-weight: 700;
-    }
-
-    @media (max-width: 768px) {
-      .add-item-form {
-        grid-template-columns: 1fr;
-      }
-
-      .actions-row {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
+    .status-steps { display:flex; margin-bottom:32px; }
+    .status-step { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; }
+    .status-step-dot { width:32px; height:32px; border-radius:50%; border:2px solid var(--border); background:var(--bg-hover); display:flex; align-items:center; justify-content:center; font-size:12px; z-index:1; }
+    .status-step.done .status-step-dot { background:var(--green); border-color:var(--green); color:#000; }
+    .status-step.active .status-step-dot { background:var(--green); border-color:var(--green); color:#000; box-shadow:0 0 0 4px var(--green-dim); }
+    .status-step-label { font-size:11px; color:var(--text-muted); margin-top:6px; text-align:center; }
+    .status-step.active .status-step-label { color:var(--green); font-weight:600; }
+    .status-step-line { position:absolute; top:16px; left:50%; width:100%; height:2px; background:var(--border); z-index:0; }
+    .status-step.done .status-step-line { background:var(--green); }
+    .status-step:last-child .status-step-line { display:none; }
   </style>
 </head>
 <body>
-
-  <!-- Loading -->
-  <div class="loading" id="loadingScreen">
-    <div class="spinner"></div>
-    Loading purchase order...
+  <div class="main-content">
+    <div class="page-content">
+      <div id="po-content">
+        <div class="empty-state"><div class="spinner"></div><p style="margin-top:12px">Loading...</p></div>
+      </div>
+    </div>
   </div>
 
-  <!-- Main Content -->
-  <div class="main" id="mainContent" style="display:none">
-
-    <!-- Detail Header -->
-    <div class="detail-header" id="detailHeader">
-      <!-- Populated by JS -->
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="stats-grid" id="statsGrid">
-      <div class="stat-card">
-        <div class="stat-label">Total Items</div>
-        <div class="stat-value" id="statItems">0</div>
-        <div class="stat-sub">Line items in order</div>
+  <!-- ADD ITEM MODAL -->
+  <div class="modal-overlay" id="item-modal">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <span class="modal-title">Add Item to PO</span>
+        <button class="modal-close" onclick="closeItemModal()">×</button>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Value</div>
-        <div class="stat-value" id="statValue">$0.00</div>
-        <div class="stat-sub">Order total</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Expected Delivery</div>
-        <div class="stat-value" id="statDelivery">&mdash;</div>
-        <div class="stat-sub">Delivery date</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Days Remaining</div>
-        <div class="stat-value" id="statDays">&mdash;</div>
-        <div class="stat-sub" id="statDaysSub">Until expected delivery</div>
-      </div>
-    </div>
-
-    <!-- Order Items Section -->
-    <div class="section" id="itemsSection">
-      <div class="section-header">
-        <h3>Order Items</h3>
-        <button class="btn btn-primary btn-sm" id="btnAddItem">+ Add Item</button>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Product Name</th>
-              <th>SKU</th>
-              <th>Quantity</th>
-              <th>Unit Price</th>
-              <th>Total</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="itemsTableBody">
-            <tr>
-              <td colspan="6">
-                <div class="loading">
-                  <div class="spinner"></div>
-                  Loading items...
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <!-- Add Item Inline Form -->
-      <div class="add-item-row" id="addItemRow">
-        <div class="add-item-form">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Product</label>
+          <select id="item-product" class="form-select" onchange="fillProductPrice()">
+            <option value="">Select product or type manually...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Product Name <span class="required">*</span></label>
+          <input type="text" id="item-name" class="form-input" placeholder="Product name">
+        </div>
+        <div class="form-grid">
           <div class="form-group">
-            <label for="itemProduct">Product</label>
-            <select class="form-control" id="itemProduct">
-              <option value="">Select a product...</option>
-            </select>
+            <label class="form-label">SKU</label>
+            <input type="text" id="item-sku" class="form-input" placeholder="SKU-001">
           </div>
           <div class="form-group">
-            <label for="itemQty">Quantity</label>
-            <input type="number" class="form-control" id="itemQty" placeholder="0" min="1" value="1">
+            <label class="form-label">Quantity <span class="required">*</span></label>
+            <input type="number" id="item-qty" class="form-input" placeholder="100" oninput="calcItemTotal()">
           </div>
           <div class="form-group">
-            <label for="itemPrice">Unit Price</label>
-            <input type="number" class="form-control" id="itemPrice" placeholder="0.00" min="0" step="0.01">
+            <label class="form-label">Unit Price (USD) <span class="required">*</span></label>
+            <input type="number" id="item-price" class="form-input" placeholder="8.50" step="0.01" oninput="calcItemTotal()">
           </div>
-          <div style="display:flex;gap:6px;align-items:flex-end;padding-bottom:1px;">
-            <button class="btn btn-primary btn-sm" id="btnConfirmAdd">Add</button>
-            <button class="btn btn-secondary btn-sm" id="btnCancelAdd">Cancel</button>
+          <div class="form-group">
+            <label class="form-label">Total</label>
+            <div class="computed-field" id="item-total" style="background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-weight:600">$0.00</div>
           </div>
         </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <input type="text" id="item-notes" class="form-input" placeholder="Color, size, specifications...">
+        </div>
+        <div class="form-error" id="item-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeItemModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="addItem()">Add Item</button>
       </div>
     </div>
+  </div>
 
-    <!-- Linked Shipments Section -->
-    <div class="section" id="shipmentsSection">
-      <div class="section-header">
-        <h3>Linked Shipments</h3>
-        <a class="btn btn-primary btn-sm" id="btnAddShipment" href="#">+ Add Shipment</a>
+  <!-- PAYMENT MODAL -->
+  <div class="modal-overlay" id="payment-modal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <span class="modal-title">Record Payment</span>
+        <button class="modal-close" onclick="closePaymentModal()">×</button>
       </div>
-      <div id="shipmentsContent">
-        <div class="loading">
-          <div class="spinner"></div>
-          Loading shipments...
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Amount Paid (USD)</label>
+          <input type="number" id="pay-amount" class="form-input" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Date</label>
+          <input type="date" id="pay-date" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <input type="text" id="pay-notes" class="form-input" placeholder="Wire transfer, reference #...">
         </div>
       </div>
-    </div>
-
-    <!-- Order Timeline Section -->
-    <div class="section" id="timelineSection">
-      <div class="section-header">
-        <h3>Order Timeline</h3>
-      </div>
-      <div class="timeline" id="timelineContent">
-        <!-- Populated by JS -->
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Delete Item Confirm -->
-  <div class="confirm-overlay" id="deleteItemConfirm">
-    <div class="confirm-box">
-      <h4>Remove Item</h4>
-      <p>Are you sure you want to remove this item from the order?</p>
-      <div class="confirm-actions">
-        <button class="btn btn-secondary" id="deleteItemCancelBtn">Cancel</button>
-        <button class="btn btn-danger" id="deleteItemConfirmBtn">Remove</button>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closePaymentModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="recordPayment()">Record Payment</button>
       </div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script src="/js/layout.js"></script>
   <script>
-    let currentUser = null;
-    let poId = null;
-    let poData = null;
-    let poItems = [];
-    let allProducts = [];
-    let deleteItemTargetId = null;
+    const poId = new URLSearchParams(location.search).get('id')
+    let po = null, items = [], products = []
 
-    // ---- INITIALIZATION ----
-    async function init() {
-      currentUser = await requireAuth();
-      if (!currentUser) return;
+    const STATUS_STEPS = ['draft','sent','confirmed','in_production','shipped','received']
+    const STATUS_LABELS = { draft:'Draft', sent:'Sent to Supplier', confirmed:'Confirmed', in_production:'In Production', shipped:'Shipped', received:'Received' }
 
-      renderLayout('orders');
+    async function load() {
+      const user = await window.requireAuth()
+      await window.initLayout({ page: 'purchase-orders', title: 'Purchase Order' })
+      if (!poId) { window.location.href = '/purchase-orders.html'; return }
 
-      // Get PO ID from URL
-      const params = new URLSearchParams(window.location.search);
-      poId = params.get('id');
+      const [{ data: p }, { data: it }, { data: pr }] = await Promise.all([
+        window._sb.from('purchase_orders').select('*, suppliers(company_name, lead_time_days)').eq('id', poId).eq('user_id', user.id).single(),
+        window._sb.from('po_items').select('*').eq('po_id', poId),
+        window._sb.from('products').select('id,name,sku,cost_price').eq('user_id', user.id)
+      ])
+      if (!p) { window.location.href = '/purchase-orders.html'; return }
+      po = p; items = it || []; products = pr || []
 
-      if (!poId) {
-        document.getElementById('loadingScreen').innerHTML =
-          '<div class="empty-state"><p>No purchase order specified</p><small><a href="/purchase-orders.html" style="color:var(--primary)">Back to Purchase Orders</a></small></div>';
-        return;
-      }
+      const sel = document.getElementById('item-product')
+      sel.innerHTML = '<option value="">Select product...</option>' + products.map(p => `<option value="${p.id}" data-name="${window.escapeHtml(p.name)}" data-sku="${p.sku||''}" data-price="${p.cost_price||0}">${window.escapeHtml(p.name)}</option>`).join('')
 
-      // Set the shipment add link
-      document.getElementById('btnAddShipment').href = '/shipments.html?action=add&po_id=' + poId;
+      document.getElementById('pay-date').value = new Date().toISOString().split('T')[0]
 
-      try {
-        await loadPO();
-        await Promise.all([
-          loadItems(),
-          loadProducts(),
-          loadShipments()
-        ]);
-        renderTimeline();
-      } catch (err) {
-        console.error('Error loading PO detail:', err);
-        showToast('Failed to load purchase order', 'error');
-      }
-
-      document.getElementById('loadingScreen').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'block';
+      render()
     }
 
-    // ---- LOAD PURCHASE ORDER ----
-    async function loadPO() {
-      const { data, error } = await window._supabase
-        .from('purchase_orders')
-        .select('*, suppliers(company_name)')
-        .eq('id', poId)
-        .eq('user_id', currentUser.id)
-        .single();
+    function render() {
+      const stepIdx = STATUS_STEPS.indexOf(po.status)
+      const totalPaid = po.amount_paid || 0
+      const totalVal = po.total_value || 0
+      const remaining = totalVal - totalPaid
 
-      if (error || !data) {
-        document.getElementById('loadingScreen').innerHTML =
-          '<div class="empty-state"><p>Purchase order not found</p><small><a href="/purchase-orders.html" style="color:var(--primary)">Back to Purchase Orders</a></small></div>';
-        throw new Error('PO not found');
-      }
+      const stepsHtml = STATUS_STEPS.map((s, i) => `
+        <div class="status-step ${i < stepIdx ? 'done' : i === stepIdx ? 'active' : ''}">
+          <div class="status-step-line"></div>
+          <div class="status-step-dot">${i < stepIdx ? '✓' : i + 1}</div>
+          <div class="status-step-label">${STATUS_LABELS[s]}</div>
+        </div>`).join('')
 
-      poData = data;
-      document.title = 'Supploxi — ' + (poData.po_number || 'PO Detail');
-      renderHeader();
-      renderStats();
+      const nextStatuses = STATUS_STEPS.slice(stepIdx + 1).filter(s => s !== 'cancelled')
+      const nextBtns = nextStatuses.slice(0,1).map(s =>
+        `<button class="btn btn-primary" onclick="updateStatus('${s}')">Mark as ${STATUS_LABELS[s]} →</button>`
+      ).join('')
+
+      document.getElementById('po-content').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+          <div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <h1 style="font-size:22px;font-weight:700">${po.po_number}</h1>
+              ${window.getStatusBadge(po.status)}
+              ${window.getStatusBadge(po.payment_status||'pending')}
+            </div>
+            <div style="color:var(--text-muted);font-size:14px;margin-top:4px">
+              ${window.escapeHtml(po.suppliers?.company_name||'—')} · Created ${window.formatDate(po.created_at)}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="window.location.href='/purchase-orders.html'">← Back</button>
+            ${po.status !== 'cancelled' && po.status !== 'received' ? `<button class="btn btn-secondary" onclick="updateStatus('cancelled')">Cancel PO</button>` : ''}
+            ${nextBtns}
+          </div>
+        </div>
+
+        <!-- PROGRESS -->
+        <div class="card" style="margin-bottom:24px">
+          <div class="status-steps">${stepsHtml}</div>
+          <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+            <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-value" style="font-size:22px">${window.formatCurrency(totalVal)}</div></div>
+            <div class="stat-card"><div class="stat-label">Amount Paid</div><div class="stat-value" style="font-size:22px;color:var(--green)">${window.formatCurrency(totalPaid)}</div></div>
+            <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" style="font-size:22px;color:${remaining>0?'var(--orange)':'var(--green)'}">${window.formatCurrency(remaining)}</div></div>
+            <div class="stat-card"><div class="stat-label">Expected Delivery</div><div class="stat-value" style="font-size:16px;padding-top:8px">${window.formatDate(po.expected_delivery)}</div></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:24px">
+          <div>
+            <!-- ITEMS -->
+            <div class="table-container" style="margin-bottom:24px">
+              <div class="table-header" style="justify-content:space-between">
+                <span style="font-weight:600">Order Items (${items.length})</span>
+                ${po.status !== 'received' && po.status !== 'cancelled' ? `<button class="btn btn-sm btn-primary" onclick="openItemModal()">+ Add Item</button>` : ''}
+              </div>
+              ${items.length ? `
+                <table>
+                  <thead><tr><th>Product</th><th>SKU</th><th>Ordered</th><th>Received</th><th>Unit Price</th><th>Total</th><th></th></tr></thead>
+                  <tbody>
+                    ${items.map(it => `<tr>
+                      <td><strong>${window.escapeHtml(it.product_name)}</strong>${it.notes?`<div style="font-size:11px;color:var(--text-muted)">${window.escapeHtml(it.notes)}</div>`:''}</td>
+                      <td style="color:var(--text-muted)">${it.sku||'—'}</td>
+                      <td>${it.quantity}</td>
+                      <td style="color:${it.quantity_received>=it.quantity?'var(--green)':'var(--text-muted)'}">${it.quantity_received||0}</td>
+                      <td>${window.formatCurrency(it.unit_price)}</td>
+                      <td><strong>${window.formatCurrency(it.total_price||it.quantity*it.unit_price)}</strong></td>
+                      <td><button class="btn btn-sm btn-danger btn-icon" onclick="deleteItem('${it.id}')">🗑️</button></td>
+                    </tr>`).join('')}
+                    <tr style="background:rgba(0,0,0,0.2)">
+                      <td colspan="5" style="text-align:right;font-weight:600;padding:14px 16px">Total</td>
+                      <td colspan="2"><strong style="font-size:16px;color:var(--green)">${window.formatCurrency(items.reduce((a,i)=>a+(i.total_price||i.quantity*i.unit_price),0))}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>` : `<div class="empty-state" style="padding:30px"><p>No items yet. Add products to this PO.</p></div>`}
+            </div>
+
+            <!-- LINKED SHIPMENTS -->
+            <div id="linked-shipments"></div>
+          </div>
+
+          <!-- SIDEBAR INFO -->
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title" style="margin-bottom:16px">Order Details</div>
+              <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Supplier</span><strong>${window.escapeHtml(po.suppliers?.company_name||'—')}</strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Order Date</span><span>${window.formatDate(po.order_date)}</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Payment Terms</span><span>${po.payment_terms||'—'}</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Shipping</span><span>${po.shipping_method||'—'}</span></div>
+              </div>
+              ${po.notes ? `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;font-size:13px;color:var(--text-muted)">${window.escapeHtml(po.notes)}</div>` : ''}
+            </div>
+
+            <div class="card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <span class="card-title">Payments</span>
+                <button class="btn btn-sm btn-secondary" onclick="openPaymentModal()">+ Record</button>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Order Total</span><strong>${window.formatCurrency(totalVal)}</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Paid</span><strong style="color:var(--green)">${window.formatCurrency(totalPaid)}</strong></div>
+                <div style="height:1px;background:var(--border);margin:4px 0"></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Remaining</span><strong style="color:${remaining>0?'var(--orange)':'var(--green)'}">${window.formatCurrency(remaining)}</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>`
+
+      loadLinkedShipments()
     }
 
-    // ---- RENDER HEADER ----
-    function renderHeader() {
-      const supplierName = (poData.suppliers && poData.suppliers.company_name)
-        ? escapeHtml(poData.suppliers.company_name)
-        : 'Unknown Supplier';
-
-      const status = poData.status || 'Draft';
-      const statusLower = status.toLowerCase();
-
-      let actionButtons = '';
-
-      if (statusLower === 'draft') {
-        actionButtons += '<button class="btn btn-primary btn-sm" onclick="updateStatus(\'Sent\')">Mark as Sent</button>';
-      }
-      if (statusLower === 'sent') {
-        actionButtons += '<button class="btn btn-primary btn-sm" onclick="updateStatus(\'Confirmed\')">Mark as Confirmed</button>';
-      }
-      if (statusLower === 'confirmed') {
-        actionButtons += '<button class="btn btn-primary btn-sm" onclick="updateStatus(\'In Production\')">Mark as In Production</button>';
-      }
-      if (statusLower === 'in production') {
-        actionButtons += '<button class="btn btn-primary btn-sm" onclick="updateStatus(\'Shipped\')">Mark as Shipped</button>';
-      }
-      if (statusLower === 'shipped') {
-        actionButtons += '<button class="btn btn-primary btn-sm" onclick="updateStatus(\'Received\')">Mark as Received</button>';
-      }
-
-      document.getElementById('detailHeader').innerHTML =
-        '<h2>' + escapeHtml(poData.po_number || 'Untitled PO') + '</h2>' +
-        '<div class="supplier-name">' + supplierName + '</div>' +
-        '<div class="status-row">' + statusBadge(status) + '</div>' +
-        '<div class="actions-row">' +
-          '<a href="/purchase-orders.html" class="back-link">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>' +
-            'Back to Orders' +
-          '</a>' +
-          actionButtons +
-        '</div>';
+    async function loadLinkedShipments() {
+      const { data } = await window._sb.from('shipments').select('*').eq('po_id', poId)
+      const el = document.getElementById('linked-shipments')
+      if (!el) return
+      el.innerHTML = `
+        <div class="table-container">
+          <div class="table-header" style="justify-content:space-between">
+            <span style="font-weight:600">Linked Shipments</span>
+            <a href="/shipments.html?po=${poId}" class="btn btn-sm btn-secondary">+ Add Shipment</a>
+          </div>
+          ${data?.length ? `<table>
+            <thead><tr><th>Tracking #</th><th>Status</th><th>ETA</th><th>Days</th></tr></thead>
+            <tbody>${data.map(s=>`<tr onclick="window.location.href='/shipment-detail.html?id=${s.id}'">
+              <td><strong>${window.escapeHtml(s.tracking_number)}</strong></td>
+              <td>${window.getStatusBadge(s.status)}</td>
+              <td>${window.formatDate(s.estimated_arrival)}</td>
+              <td>${s.days_in_transit||0}d</td>
+            </tr>`).join('')}</tbody>
+          </table>` : `<div class="empty-state" style="padding:24px"><p>No shipments linked to this PO</p></div>`}
+        </div>`
     }
 
-    // ---- UPDATE STATUS ----
     async function updateStatus(newStatus) {
-      const { error } = await window._supabase
-        .from('purchase_orders')
-        .update({ status: newStatus })
-        .eq('id', poId)
-        .eq('user_id', currentUser.id);
-
-      if (error) {
-        showToast('Failed to update status: ' + error.message, 'error');
-        return;
-      }
-
-      showToast('Status updated to ' + newStatus);
-      poData.status = newStatus;
-      renderHeader();
-      renderTimeline();
+      const { error } = await window._sb.from('purchase_orders').update({ status: newStatus }).eq('id', poId)
+      if (error) { window.showToast('Error: ' + error.message, 'error'); return }
+      po.status = newStatus
+      window.showToast(`Status updated to ${newStatus.replace('_',' ')}`, 'success')
+      render()
     }
 
-    // ---- RENDER STATS ----
-    function renderStats() {
-      // Total Items
-      document.getElementById('statItems').textContent = poItems.length;
+    function openItemModal() { document.getElementById('item-modal').classList.add('active') }
+    function closeItemModal() { document.getElementById('item-modal').classList.remove('active') }
+    function openPaymentModal() { document.getElementById('payment-modal').classList.add('active') }
+    function closePaymentModal() { document.getElementById('payment-modal').classList.remove('active') }
 
-      // Total Value
-      const totalValue = poItems.reduce(function(sum, item) {
-        return sum + (parseFloat(item.total_price) || 0);
-      }, 0);
-      document.getElementById('statValue').textContent = formatCurrency(totalValue);
-
-      // Expected Delivery
-      if (poData.expected_delivery) {
-        document.getElementById('statDelivery').textContent = formatDate(poData.expected_delivery);
-        document.getElementById('statDelivery').style.fontSize = '1.2rem';
-
-        // Days Remaining
-        const today = new Date().toISOString().split('T')[0];
-        const daysLeft = daysBetween(today, poData.expected_delivery);
-
-        if (daysLeft < 0) {
-          document.getElementById('statDays').textContent = Math.abs(daysLeft);
-          document.getElementById('statDays').classList.add('days-overdue');
-          document.getElementById('statDaysSub').textContent = Math.abs(daysLeft) + ' days overdue';
-          document.getElementById('statDaysSub').className = 'stat-sub down';
-        } else {
-          document.getElementById('statDays').textContent = daysLeft;
-          document.getElementById('statDays').classList.add('days-remaining');
-          document.getElementById('statDaysSub').textContent = 'Days until delivery';
-          document.getElementById('statDaysSub').className = 'stat-sub up';
-        }
-      } else {
-        document.getElementById('statDelivery').textContent = '\u2014';
-        document.getElementById('statDays').textContent = '\u2014';
-      }
+    function fillProductPrice() {
+      const sel = document.getElementById('item-product')
+      const opt = sel.options[sel.selectedIndex]
+      if (!opt.value) return
+      document.getElementById('item-name').value = opt.dataset.name || ''
+      document.getElementById('item-sku').value = opt.dataset.sku || ''
+      document.getElementById('item-price').value = opt.dataset.price || ''
+      calcItemTotal()
     }
 
-    // ---- LOAD ITEMS ----
-    async function loadItems() {
-      const { data, error } = await window._supabase
-        .from('po_items')
-        .select('*')
-        .eq('po_id', poId)
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error loading items:', error);
-        showToast('Failed to load order items', 'error');
-        poItems = [];
-      } else {
-        poItems = data || [];
-      }
-
-      renderItemsTable();
-      renderStats();
-    }
-
-    // ---- RENDER ITEMS TABLE ----
-    function renderItemsTable() {
-      const tbody = document.getElementById('itemsTableBody');
-
-      if (!poItems || poItems.length === 0) {
-        tbody.innerHTML =
-          '<tr>' +
-            '<td colspan="6">' +
-              '<div class="empty-state">' +
-                '<p>No items in this order</p>' +
-                '<small>Click "+ Add Item" to add products to this order</small>' +
-              '</div>' +
-            '</td>' +
-          '</tr>';
-        return;
-      }
-
-      tbody.innerHTML = poItems.map(function(item) {
-        return '<tr>' +
-          '<td class="cell-primary">' + escapeHtml(item.product_name || 'Unnamed') + '</td>' +
-          '<td>' + escapeHtml(item.sku || '\u2014') + '</td>' +
-          '<td>' + (item.quantity || 0) + '</td>' +
-          '<td>' + formatCurrency(item.unit_price) + '</td>' +
-          '<td class="cell-primary">' + formatCurrency(item.total_price) + '</td>' +
-          '<td>' +
-            '<button class="btn btn-danger btn-sm" onclick="confirmDeleteItem(\'' + item.id + '\')">Remove</button>' +
-          '</td>' +
-        '</tr>';
-      }).join('');
-    }
-
-    // ---- LOAD PRODUCTS (for dropdown) ----
-    async function loadProducts() {
-      const { data, error } = await window._supabase
-        .from('products')
-        .select('id, name, sku, cost_price')
-        .eq('user_id', currentUser.id)
-        .order('name', { ascending: true });
-
-      if (error) {
-        console.error('Error loading products:', error);
-        return;
-      }
-
-      allProducts = data || [];
-
-      const select = document.getElementById('itemProduct');
-      // Clear existing options except the placeholder
-      select.innerHTML = '<option value="">Select a product...</option>';
-
-      allProducts.forEach(function(p) {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = (p.name || 'Unnamed') + (p.sku ? ' (' + p.sku + ')' : '');
-        opt.dataset.costPrice = p.cost_price || '';
-        opt.dataset.name = p.name || '';
-        opt.dataset.sku = p.sku || '';
-        select.appendChild(opt);
-      });
-    }
-
-    // ---- ADD ITEM ----
-    function showAddItemForm() {
-      document.getElementById('addItemRow').classList.add('show');
-      document.getElementById('itemProduct').value = '';
-      document.getElementById('itemQty').value = '1';
-      document.getElementById('itemPrice').value = '';
-    }
-
-    function hideAddItemForm() {
-      document.getElementById('addItemRow').classList.remove('show');
+    function calcItemTotal() {
+      const qty = parseFloat(document.getElementById('item-qty').value) || 0
+      const price = parseFloat(document.getElementById('item-price').value) || 0
+      document.getElementById('item-total').textContent = window.formatCurrency(qty * price)
     }
 
     async function addItem() {
-      const productSelect = document.getElementById('itemProduct');
-      const productId = productSelect.value;
-      const qty = parseInt(document.getElementById('itemQty').value);
-      const unitPrice = parseFloat(document.getElementById('itemPrice').value);
-
-      if (!productId) {
-        showToast('Please select a product', 'error');
-        return;
-      }
-
-      if (!qty || qty < 1) {
-        showToast('Please enter a valid quantity', 'error');
-        return;
-      }
-
-      if (isNaN(unitPrice) || unitPrice < 0) {
-        showToast('Please enter a valid unit price', 'error');
-        return;
-      }
-
-      const selectedOption = productSelect.options[productSelect.selectedIndex];
-      const productName = selectedOption.dataset.name || '';
-      const sku = selectedOption.dataset.sku || '';
-      const totalPrice = qty * unitPrice;
-
-      const addBtn = document.getElementById('btnConfirmAdd');
-      addBtn.disabled = true;
-      addBtn.textContent = 'Adding...';
-
-      const { error } = await window._supabase
-        .from('po_items')
-        .insert({
-          po_id: poId,
-          product_id: productId,
-          product_name: productName,
-          sku: sku,
-          quantity: qty,
-          unit_price: unitPrice,
-          total_price: totalPrice
-        });
-
-      addBtn.disabled = false;
-      addBtn.textContent = 'Add';
-
-      if (error) {
-        showToast('Failed to add item: ' + error.message, 'error');
-        return;
-      }
-
-      showToast('Item added to order');
-      hideAddItemForm();
-      await loadItems();
-      await updatePOTotalValue();
+      const name = document.getElementById('item-name').value.trim()
+      const qty = parseInt(document.getElementById('item-qty').value)
+      const price = parseFloat(document.getElementById('item-price').value)
+      if (!name) { document.getElementById('item-error').textContent = 'Product name required.'; return }
+      if (!qty || qty < 1) { document.getElementById('item-error').textContent = 'Quantity must be at least 1.'; return }
+      if (!price || price < 0) { document.getElementById('item-error').textContent = 'Valid price required.'; return }
+      const productId = document.getElementById('item-product').value || null
+      const { error } = await window._sb.from('po_items').insert({
+        po_id: poId, product_id: productId,
+        product_name: name, sku: document.getElementById('item-sku').value.trim(),
+        quantity: qty, unit_price: price, total_price: qty * price,
+        notes: document.getElementById('item-notes').value.trim()
+      })
+      if (error) { document.getElementById('item-error').textContent = error.message; return }
+      // Atualiza total do PO
+      const newTotal = items.reduce((a,i) => a+(i.total_price||0), 0) + (qty * price)
+      await window._sb.from('purchase_orders').update({ total_value: newTotal }).eq('id', poId)
+      po.total_value = newTotal
+      window.showToast('Item added!', 'success')
+      closeItemModal()
+      const { data } = await window._sb.from('po_items').select('*').eq('po_id', poId)
+      items = data || []
+      render()
     }
 
-    // ---- DELETE ITEM ----
-    function confirmDeleteItem(itemId) {
-      deleteItemTargetId = itemId;
-      document.getElementById('deleteItemConfirm').classList.add('show');
+    async function deleteItem(itemId) {
+      const it = items.find(i => i.id === itemId)
+      if (!it) return
+      const { error } = await window._sb.from('po_items').delete().eq('id', itemId)
+      if (error) { window.showToast('Error: ' + error.message, 'error'); return }
+      const newTotal = Math.max(0, (po.total_value||0) - (it.total_price||0))
+      await window._sb.from('purchase_orders').update({ total_value: newTotal }).eq('id', poId)
+      po.total_value = newTotal
+      items = items.filter(i => i.id !== itemId)
+      window.showToast('Item removed.', 'success')
+      render()
     }
 
-    function closeDeleteItemConfirm() {
-      deleteItemTargetId = null;
-      document.getElementById('deleteItemConfirm').classList.remove('show');
+    async function recordPayment() {
+      const amount = parseFloat(document.getElementById('pay-amount').value) || 0
+      if (amount <= 0) return
+      const newPaid = (po.amount_paid || 0) + amount
+      const newStatus = newPaid >= (po.total_value || 0) ? 'paid' : 'partial'
+      const { error } = await window._sb.from('purchase_orders').update({ amount_paid: newPaid, payment_status: newStatus }).eq('id', poId)
+      if (error) { window.showToast('Error: ' + error.message, 'error'); return }
+      po.amount_paid = newPaid
+      po.payment_status = newStatus
+      window.showToast('Payment recorded!', 'success')
+      closePaymentModal()
+      render()
     }
 
-    async function executeDeleteItem() {
-      if (!deleteItemTargetId) return;
-
-      const btn = document.getElementById('deleteItemConfirmBtn');
-      btn.disabled = true;
-      btn.textContent = 'Removing...';
-
-      const { error } = await window._supabase
-        .from('po_items')
-        .delete()
-        .eq('id', deleteItemTargetId);
-
-      btn.disabled = false;
-      btn.textContent = 'Remove';
-
-      if (error) {
-        showToast('Failed to remove item: ' + error.message, 'error');
-      } else {
-        showToast('Item removed from order');
-        await loadItems();
-        await updatePOTotalValue();
-      }
-
-      closeDeleteItemConfirm();
-    }
-
-    // ---- UPDATE PO TOTAL VALUE ----
-    async function updatePOTotalValue() {
-      const totalValue = poItems.reduce(function(sum, item) {
-        return sum + (parseFloat(item.total_price) || 0);
-      }, 0);
-
-      const { error } = await window._supabase
-        .from('purchase_orders')
-        .update({ total_value: totalValue })
-        .eq('id', poId)
-        .eq('user_id', currentUser.id);
-
-      if (error) {
-        console.error('Error updating PO total value:', error);
-      }
-
-      poData.total_value = totalValue;
-    }
-
-    // ---- LOAD SHIPMENTS ----
-    async function loadShipments() {
-      const container = document.getElementById('shipmentsContent');
-
-      const { data, error } = await window._supabase
-        .from('shipments')
-        .select('*')
-        .eq('po_id', poId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading shipments:', error);
-        container.innerHTML =
-          '<div class="empty-state"><p>Failed to load shipments</p></div>';
-        return;
-      }
-
-      const shipments = data || [];
-
-      if (shipments.length === 0) {
-        container.innerHTML =
-          '<div class="empty-state">' +
-            '<p>No shipments linked to this order yet</p>' +
-            '<small>Click "+ Add Shipment" to create a shipment for this order</small>' +
-          '</div>';
-        return;
-      }
-
-      let html = '<table>' +
-        '<thead>' +
-          '<tr>' +
-            '<th>Tracking Number</th>' +
-            '<th>Carrier</th>' +
-            '<th>Ship Date</th>' +
-            '<th>ETA</th>' +
-            '<th>Status</th>' +
-          '</tr>' +
-        '</thead>' +
-        '<tbody>';
-
-      shipments.forEach(function(s) {
-        html += '<tr>' +
-          '<td><a href="/shipment-detail.html?id=' + s.id + '" style="color:var(--primary);text-decoration:none;font-weight:600;">' + escapeHtml(s.tracking_number || 'N/A') + '</a></td>' +
-          '<td>' + escapeHtml(s.carrier || '\u2014') + '</td>' +
-          '<td>' + formatDate(s.ship_date) + '</td>' +
-          '<td>' + formatDate(s.estimated_arrival) + '</td>' +
-          '<td>' + statusBadge(s.status) + '</td>' +
-        '</tr>';
-      });
-
-      html += '</tbody></table>';
-      container.innerHTML = html;
-    }
-
-    // ---- RENDER TIMELINE ----
-    function renderTimeline() {
-      const container = document.getElementById('timelineContent');
-
-      const statusOrder = [
-        { key: 'draft', label: 'Created' },
-        { key: 'sent', label: 'Sent' },
-        { key: 'confirmed', label: 'Confirmed' },
-        { key: 'in production', label: 'In Production' },
-        { key: 'shipped', label: 'Shipped' },
-        { key: 'received', label: 'Received' }
-      ];
-
-      const currentStatus = (poData.status || 'draft').toLowerCase();
-      const currentIdx = statusOrder.findIndex(function(s) { return s.key === currentStatus; });
-      const orderDate = poData.order_date || poData.created_at;
-
-      let html = '';
-
-      statusOrder.forEach(function(step, idx) {
-        const isReached = idx <= currentIdx;
-        const reachedClass = isReached ? 'reached' : 'future';
-
-        let dateStr = '';
-        if (idx === 0 && orderDate) {
-          dateStr = formatDate(orderDate);
-        } else if (isReached && idx === currentIdx) {
-          dateStr = 'Current';
-        } else if (isReached) {
-          dateStr = 'Completed';
-        } else {
-          dateStr = 'Pending';
-        }
-
-        let descStr = step.label;
-        if (idx === 0 && orderDate) {
-          descStr = 'Order created on ' + formatDate(orderDate);
-        } else if (isReached && idx === currentIdx) {
-          descStr = 'Currently ' + step.label.toLowerCase();
-        } else if (isReached) {
-          descStr = step.label + ' (completed)';
-        } else {
-          descStr = step.label + ' (pending)';
-        }
-
-        html += '<div class="timeline-item ' + reachedClass + '">' +
-          '<div class="tl-date">' + dateStr + '</div>' +
-          '<div class="tl-desc">' + descStr + '</div>' +
-        '</div>';
-      });
-
-      container.innerHTML = html;
-    }
-
-    // ---- AUTO-FILL PRICE ON PRODUCT SELECT ----
-    document.getElementById('itemProduct').addEventListener('change', function() {
-      const selectedOption = this.options[this.selectedIndex];
-      const costPrice = selectedOption.dataset.costPrice;
-      if (costPrice && costPrice !== '') {
-        document.getElementById('itemPrice').value = parseFloat(costPrice).toFixed(2);
-      } else {
-        document.getElementById('itemPrice').value = '';
-      }
-    });
-
-    // ---- EVENT LISTENERS ----
-    document.getElementById('btnAddItem').addEventListener('click', showAddItemForm);
-    document.getElementById('btnCancelAdd').addEventListener('click', hideAddItemForm);
-    document.getElementById('btnConfirmAdd').addEventListener('click', addItem);
-
-    document.getElementById('deleteItemCancelBtn').addEventListener('click', closeDeleteItemConfirm);
-    document.getElementById('deleteItemConfirmBtn').addEventListener('click', executeDeleteItem);
-
-    document.getElementById('deleteItemConfirm').addEventListener('click', function(e) {
-      if (e.target === this) closeDeleteItemConfirm();
-    });
-
-    // Keyboard: Escape to close overlays
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        closeDeleteItemConfirm();
-        hideAddItemForm();
-      }
-    });
-
-    // ---- INIT ----
-    init();
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeItemModal(); closePaymentModal() } })
+    load()
   </script>
 </body>
 </html>
