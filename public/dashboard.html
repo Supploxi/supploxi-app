@@ -150,6 +150,55 @@
       }
     }
 
+    .tracking-update-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 22px;
+      border-bottom: 1px solid rgba(255,255,255,.03);
+      transition: background .1s;
+    }
+    .tracking-update-row:last-child { border-bottom: none; }
+    .tracking-update-row:hover { background: rgba(255,255,255,.02); }
+
+    .tracking-update-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .tracking-update-icon.transit { background: rgba(59,130,246,.15); }
+    .tracking-update-icon.delivered { background: rgba(0,212,170,.15); }
+    .tracking-update-icon.exception { background: rgba(255,71,87,.15); }
+    .tracking-update-icon.customs { background: rgba(245,158,11,.15); }
+
+    .tracking-update-info { flex: 1; min-width: 0; }
+    .tracking-update-tracking {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    .tracking-update-tracking a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .tracking-update-tracking a:hover { text-decoration: underline; }
+    .tracking-update-desc {
+      font-size: .75rem;
+      color: var(--text-muted);
+    }
+    .tracking-update-time {
+      font-size: .7rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
     @media (max-width: 768px) {
       .alert-metrics {
         display: none;
@@ -207,6 +256,24 @@
         </div>
       </div>
 
+      <!-- RECENT TRACKING UPDATES -->
+      <div class="section" id="trackingUpdatesSection">
+        <div class="section-header">
+          <div class="section-header-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <h3>Recent Tracking Updates</h3>
+          </div>
+        </div>
+        <div id="trackingUpdatesContent">
+          <div class="loading">
+            <div class="spinner"></div>
+            Loading tracking updates...
+          </div>
+        </div>
+      </div>
+
       <!-- AI REORDER ALERTS -->
       <div class="section" id="reorderSection">
         <div class="section-header">
@@ -259,6 +326,7 @@
       await Promise.allSettled([
         loadStats(),
         loadShipments(),
+        loadTrackingUpdates(),
         loadReorderAlerts(),
         loadSupplierPerformance()
       ]);
@@ -473,6 +541,69 @@
     function createOrderFromAlert(productId) {
       // Navigate to orders page with pre-filled product
       window.location.href = '/purchase-orders.html?action=add';
+    }
+
+    // =============================================
+    // RECENT TRACKING UPDATES
+    // =============================================
+    async function loadTrackingUpdates() {
+      const sb = window._supabase;
+      const user = await getCurrentUser();
+      const container = document.getElementById('trackingUpdatesContent');
+
+      // Get recent tracking events from 17Track source
+      const { data: events, error } = await sb
+        .from('tracking_events')
+        .select('*, shipments!inner(id, tracking_number, status, user_id)')
+        .eq('shipments.user_id', user.id)
+        .eq('source', '17track')
+        .order('event_date', { ascending: false })
+        .limit(8);
+
+      if (error) {
+        container.innerHTML = '<div class="empty-state"><p>Failed to load tracking updates</p></div>';
+        return;
+      }
+
+      if (!events || events.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No tracking updates yet</p><small>Updates will appear here as shipments are tracked via 17Track</small></div>';
+        return;
+      }
+
+      var html = '';
+      events.forEach(function(ev) {
+        var tracking = ev.shipments ? ev.shipments.tracking_number : '—';
+        var shipId = ev.shipments ? ev.shipments.id : '';
+        var status = ev.shipments ? (ev.shipments.status || '').toLowerCase() : '';
+
+        var iconClass = 'transit';
+        var iconEmoji = '&#x1F6A2;';
+        if (status === 'delivered') { iconClass = 'delivered'; iconEmoji = '&#x2705;'; }
+        else if (status === 'exception') { iconClass = 'exception'; iconEmoji = '&#x26A0;'; }
+        else if (status === 'customs') { iconClass = 'customs'; iconEmoji = '&#x1F6C3;'; }
+        else if (status === 'out for delivery') { iconClass = 'delivered'; iconEmoji = '&#x1F69A;'; }
+
+        var timeText = '—';
+        if (ev.event_date) {
+          var diffMs = Date.now() - new Date(ev.event_date).getTime();
+          var mins = Math.floor(diffMs / 60000);
+          if (mins < 1) timeText = 'just now';
+          else if (mins < 60) timeText = mins + 'm ago';
+          else if (mins < 1440) timeText = Math.floor(mins / 60) + 'h ago';
+          else timeText = Math.floor(mins / 1440) + 'd ago';
+        }
+
+        html += '<div class="tracking-update-row">' +
+          '<div class="tracking-update-icon ' + iconClass + '">' + iconEmoji + '</div>' +
+          '<div class="tracking-update-info">' +
+            '<div class="tracking-update-tracking"><a href="/shipment-detail.html?id=' + escapeHtml(shipId) + '">' + escapeHtml(tracking) + '</a></div>' +
+            '<div class="tracking-update-desc">' + escapeHtml(ev.description || 'Status update') + (ev.location ? ' — ' + escapeHtml(ev.location) : '') + '</div>' +
+          '</div>' +
+          '<div class="tracking-update-time">' + timeText + '</div>' +
+        '</div>';
+      });
+
+      container.innerHTML = html;
     }
 
     // =============================================

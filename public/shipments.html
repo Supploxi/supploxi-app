@@ -41,6 +41,21 @@
     }
     .tracking-link:hover { text-decoration: underline; }
 
+    .badge-auto-track {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .65rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(0,212,170,.12);
+      color: #00d4aa;
+      border: 1px solid rgba(0,212,170,.25);
+      margin-left: 6px;
+      white-space: nowrap;
+    }
+
     .days-transit {
       font-weight: 600;
     }
@@ -448,10 +463,14 @@
 
         const carrier = escapeHtml(s.carrier || '--');
 
+        const autoTrackBadge = s.track17_registered
+          ? '<span class="badge-auto-track">&#9679; Auto-tracking</span>'
+          : '';
+
         return `
           <tr>
             <td>
-              <a href="/shipment-detail.html?id=${s.id}" class="tracking-link cell-primary">${escapeHtml(s.tracking_number || 'N/A')}</a>
+              <a href="/shipment-detail.html?id=${s.id}" class="tracking-link cell-primary">${escapeHtml(s.tracking_number || 'N/A')}</a>${autoTrackBadge}
             </td>
             <td>${supplierName}</td>
             <td>${origin} <span class="route-arrow">&rarr;</span> ${destination}</td>
@@ -616,9 +635,38 @@
         return;
       }
 
+      // Auto-register on 17Track
+      const newShipment = data && data[0];
+      if (newShipment) {
+        registerOn17Track(newShipment.id, tracking, carrier);
+      }
+
       showToast('Shipment created successfully', 'success');
       closeModal();
       await loadShipments();
+    }
+
+    async function registerOn17Track(shipmentId, trackingNumber, carrierName) {
+      try {
+        const res = await fetch('/api/tracking/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tracking_number: trackingNumber, carrier: carrierName })
+        });
+        const result = await res.json();
+
+        if (result.code === 0 || res.ok) {
+          // Mark as registered in Supabase
+          await window._supabase
+            .from('shipments')
+            .update({ track17_registered: true })
+            .eq('id', shipmentId);
+
+          showToast('Auto-tracking enabled for ' + trackingNumber, 'success');
+        }
+      } catch (err) {
+        console.error('17Track registration failed:', err);
+      }
     }
 
     // ---- DELETE ----

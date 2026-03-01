@@ -204,6 +204,84 @@
       color: var(--text-muted);
       margin-bottom: 14px;
     }
+
+    .tracking-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .last-updated {
+      font-size: .75rem;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .btn-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .75rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(59,130,246,.12);
+      color: #3b82f6;
+      border: 1px solid rgba(59,130,246,.25);
+      cursor: pointer;
+      font-weight: 600;
+      transition: all .15s;
+    }
+    .btn-refresh:hover { background: rgba(59,130,246,.2); }
+    .btn-refresh:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-refresh .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .badge-auto-track-lg {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(0,212,170,.12);
+      color: #00d4aa;
+      border: 1px solid rgba(0,212,170,.25);
+    }
+
+    .status-change-banner {
+      display: none;
+      background: rgba(0,212,170,.1);
+      border: 1px solid rgba(0,212,170,.3);
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      font-size: .85rem;
+      color: #00d4aa;
+      font-weight: 600;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-change-banner.show { display: flex; }
+
+    .event-source-tag {
+      font-size: .6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .event-source-tag.auto {
+      background: rgba(59,130,246,.15);
+      color: #3b82f6;
+    }
+    .event-source-tag.manual {
+      background: rgba(139,143,168,.15);
+      color: #8b8fa8;
+    }
   </style>
 </head>
 <body>
@@ -222,12 +300,18 @@
           <div class="header-meta">
             <span class="carrier-name" id="carrierName">--</span>
             <span id="statusBadgeEl"></span>
+            <span class="badge-auto-track-lg" id="autoTrackBadge" style="display:none">&#9679; Auto-tracking enabled</span>
           </div>
         </div>
         <div class="detail-header-right">
           <a href="/shipments.html" class="btn btn-secondary">Back to Shipments</a>
           <button class="btn btn-primary btn-sm" id="btnAdvanceStatus" style="display:none" onclick="advanceStatus()">--</button>
         </div>
+      </div>
+
+      <!-- Status Change Banner -->
+      <div class="status-change-banner" id="statusChangeBanner">
+        &#x1F514; Status updated automatically via 17Track
       </div>
 
       <!-- Shipment Progress Bar -->
@@ -283,7 +367,15 @@
       <!-- Tracking Timeline -->
       <div class="section" id="timelineSection">
         <div class="section-header">
-          <h3>Tracking Timeline</h3>
+          <div>
+            <h3 style="margin-bottom:4px">Tracking Timeline</h3>
+            <div class="tracking-meta">
+              <span class="last-updated" id="lastUpdatedText"></span>
+              <button class="btn-refresh" id="btnRefreshTracking" onclick="refreshTracking()" style="display:none">
+                <span id="refreshIcon">&#x21bb;</span> Refresh Now
+              </button>
+            </div>
+          </div>
           <button class="btn btn-sm btn-secondary" id="btnToggleEventForm" onclick="toggleEventForm()">+ Add Event</button>
         </div>
         <div class="event-form" id="eventForm">
@@ -422,6 +514,25 @@
       document.getElementById('trackingTitle').textContent = shipment.tracking_number || 'No Tracking Number';
       document.getElementById('carrierName').textContent = shipment.carrier || 'Unknown Carrier';
       document.getElementById('statusBadgeEl').innerHTML = statusBadge(shipment.status);
+
+      // Show auto-tracking badge if registered
+      if (shipment.track17_registered) {
+        document.getElementById('autoTrackBadge').style.display = 'inline-flex';
+        document.getElementById('btnRefreshTracking').style.display = 'inline-flex';
+      }
+
+      // Show last updated time
+      if (shipment.last_tracking_update) {
+        const updated = new Date(shipment.last_tracking_update);
+        const diffMs = Date.now() - updated.getTime();
+        const mins = Math.floor(diffMs / 60000);
+        let timeText;
+        if (mins < 1) timeText = 'just now';
+        else if (mins < 60) timeText = mins + ' min ago';
+        else if (mins < 1440) timeText = Math.floor(mins / 60) + 'h ago';
+        else timeText = Math.floor(mins / 1440) + 'd ago';
+        document.getElementById('lastUpdatedText').textContent = 'Last updated: ' + timeText;
+      }
 
       // Set page title
       document.title = 'Supploxi — ' + (shipment.tracking_number || 'Shipment');
@@ -693,8 +804,132 @@
       document.getElementById('costTotal').textContent = formatCurrency(total);
     }
 
+    // ---- Refresh Tracking (17Track) ----
+
+    async function refreshTracking() {
+      const btn = document.getElementById('btnRefreshTracking');
+      const icon = document.getElementById('refreshIcon');
+      btn.disabled = true;
+      icon.classList.add('spin');
+
+      try {
+        const { data: { session } } = await window._supabase.auth.getSession();
+        if (!session) return;
+
+        const res = await fetch('/api/tracking/sync-one', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + session.access_token,
+          },
+          body: JSON.stringify({ shipment_id: shipmentId }),
+        });
+
+        const result = await res.json();
+
+        if (result.synced > 0) {
+          // Reload shipment data to get updated status
+          const oldStatus = (shipment.status || '').toLowerCase();
+
+          const { data: updated } = await window._supabase
+            .from('shipments')
+            .select('*, suppliers(id, company_name, country, email, phone), purchase_orders(id, po_number, order_date, total_value, status)')
+            .eq('id', shipmentId)
+            .eq('user_id', currentUser.id)
+            .single();
+
+          if (updated) {
+            shipment = updated;
+            renderHeader();
+            renderProgress();
+            renderInfoCards();
+            await loadTrackingEvents();
+
+            const newStatus = (shipment.status || '').toLowerCase();
+            if (newStatus !== oldStatus) {
+              const banner = document.getElementById('statusChangeBanner');
+              banner.classList.add('show');
+              setTimeout(() => banner.classList.remove('show'), 8000);
+            }
+
+            showToast('Tracking updated', 'success');
+          }
+        } else {
+          showToast('No new updates available', 'info');
+        }
+      } catch (err) {
+        console.error('Refresh tracking error:', err);
+        showToast('Failed to refresh tracking', 'error');
+      } finally {
+        btn.disabled = false;
+        icon.classList.remove('spin');
+      }
+    }
+
+    // Auto-sync on page load if auto-tracking is enabled
+    async function autoSyncOnLoad() {
+      if (!shipment || !shipment.track17_registered) return;
+
+      // Only auto-sync if last update was > 30 minutes ago
+      if (shipment.last_tracking_update) {
+        const diffMs = Date.now() - new Date(shipment.last_tracking_update).getTime();
+        if (diffMs < 30 * 60 * 1000) return;
+      }
+
+      await refreshTracking();
+    }
+
+    // ---- Tracking Events Render (updated for source tags) ----
+
+    const _originalLoadTrackingEvents = loadTrackingEvents;
+    loadTrackingEvents = async function() {
+      const { data, error } = await window._supabase
+        .from('tracking_events')
+        .select('*')
+        .eq('shipment_id', shipmentId)
+        .order('event_date', { ascending: false });
+
+      const container = document.getElementById('timelineBody');
+
+      if (error) {
+        container.innerHTML = '<div class="empty-timeline"><p>Error loading tracking events</p></div>';
+        return;
+      }
+
+      const events = data || [];
+
+      if (events.length === 0) {
+        container.innerHTML = `
+          <div class="empty-timeline">
+            <p>No tracking events yet</p>
+            <button class="btn btn-primary btn-sm" onclick="toggleEventForm()">+ Add Event</button>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = events.map(ev => {
+        const evDate = ev.event_date
+          ? new Date(ev.event_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : '--';
+        const sourceTag = ev.source === '17track'
+          ? '<span class="event-source-tag auto">17Track</span>'
+          : '<span class="event-source-tag manual">Manual</span>';
+        return `
+          <div class="timeline-item">
+            <div>
+              <div class="tl-date">${escapeHtml(evDate)}${sourceTag}</div>
+              <div class="tl-desc">${escapeHtml(ev.description || 'No description')}</div>
+              <div class="tl-loc">${escapeHtml(ev.location || '')}</div>
+            </div>
+          </div>`;
+      }).join('');
+    };
+
     // ---- Init ----
-    init();
+    init().then(() => {
+      // After page loads, auto-sync in background
+      setTimeout(autoSyncOnLoad, 1000);
+    });
   </script>
 </body>
 </html>

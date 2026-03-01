@@ -169,3 +169,14 @@ CREATE POLICY "Users see own tracking" ON tracking_events FOR ALL
 DROP POLICY IF EXISTS "Users see own PO items" ON po_items;
 CREATE POLICY "Users see own PO items" ON po_items FOR ALL
   USING (po_id IN (SELECT id FROM purchase_orders WHERE user_id = auth.uid()));
+
+-- =============================================
+-- 17TRACK INTEGRATION COLUMNS
+-- =============================================
+
+-- Add 17Track tracking columns to shipments
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS track17_registered BOOLEAN DEFAULT false;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS last_tracking_update TIMESTAMPTZ;
+
+-- Add source column to tracking_events (manual vs 17track)
+ALTER TABLE tracking_events ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual';
