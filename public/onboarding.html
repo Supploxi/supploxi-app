@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Welcome</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg-primary); }
+    .onboarding-wrap { width:100%; max-width:560px; padding:20px; }
+    .ob-logo { text-align:center; margin-bottom:24px; font-size:24px; font-weight:700; }
+    .ob-logo span { color:var(--green); }
+    .ob-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+    .ob-progress { height:4px; background:var(--border); }
+    .ob-progress-fill { height:100%; background:var(--green); transition:width 0.4s; }
+    .ob-body { padding:40px; }
+    .ob-step { display:none; }
+    .ob-step.active { display:block; }
+    .ob-step-num { font-size:12px; font-weight:600; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+    .ob-step h2 { font-size:24px; font-weight:700; margin-bottom:8px; }
+    .ob-step p { color:var(--text-muted); font-size:15px; margin-bottom:32px; }
+    .ob-actions { display:flex; justify-content:space-between; align-items:center; margin-top:32px; }
+    .ob-skip { font-size:14px; color:var(--text-muted); cursor:pointer; }
+    .ob-skip:hover { color:var(--text); }
+    .platform-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
+    .platform-btn { padding:16px; border:1px solid var(--border); border-radius:var(--radius-sm); text-align:center; cursor:pointer; transition:all 0.15s; font-size:14px; font-weight:500; background:transparent; color:var(--text); }
+    .platform-btn:hover { border-color:var(--green); background:var(--green-dim); color:var(--green); }
+    .platform-btn.selected { border-color:var(--green); background:var(--green-dim); color:var(--green); }
+  </style>
+</head>
+<body>
+  <div class="onboarding-wrap">
+    <div class="ob-logo"><span>S</span>upploxi</div>
+    <div class="ob-card">
+      <div class="ob-progress"><div class="ob-progress-fill" id="ob-progress" style="width:25%"></div></div>
+      <div class="ob-body">
+
+        <!-- Step 1: Profile -->
+        <div class="ob-step active" id="step-1">
+          <div class="ob-step-num">Step 1 of 4</div>
+          <h2>Welcome! Let's set up your account</h2>
+          <p>This takes less than 2 minutes. Tell us about your business.</p>
+          <div class="form-group">
+            <label class="form-label">Your Full Name <span class="required">*</span></label>
+            <input type="text" id="ob-name" class="form-input" placeholder="John Smith">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company Name <span class="required">*</span></label>
+            <input type="text" id="ob-company" class="form-input" placeholder="My Import Store LLC">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Your Timezone</label>
+            <select id="ob-timezone" class="form-select">
+              <option value="America/New_York">Eastern Time (ET)</option>
+              <option value="America/Chicago">Central Time (CT)</option>
+              <option value="America/Denver">Mountain Time (MT)</option>
+              <option value="America/Los_Angeles">Pacific Time (PT)</option>
+              <option value="America/Anchorage">Alaska Time</option>
+              <option value="Pacific/Honolulu">Hawaii Time</option>
+            </select>
+          </div>
+          <div class="form-error" id="step1-error"></div>
+          <div class="ob-actions">
+            <span></span>
+            <button class="btn btn-primary" onclick="nextStep(1)">Continue &rarr;</button>
+          </div>
+        </div>
+
+        <!-- Step 2: First Supplier -->
+        <div class="ob-step" id="step-2">
+          <div class="ob-step-num">Step 2 of 4</div>
+          <h2>Add your first supplier</h2>
+          <p>Who do you buy products from? You can add more later.</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Supplier Name <span class="required">*</span></label>
+              <input type="text" id="ob-supplier-name" class="form-input" placeholder="Shenzhen ABC Co.">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Country</label>
+              <select id="ob-supplier-country" class="form-select">
+                <option value="China">China</option>
+                <option value="India">India</option>
+                <option value="Vietnam">Vietnam</option>
+                <option value="Bangladesh">Bangladesh</option>
+                <option value="Turkey">Turkey</option>
+                <option value="Mexico">Mexico</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Lead Time (days)</label>
+              <input type="number" id="ob-supplier-lead" class="form-input" placeholder="30" value="30">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact Email</label>
+              <input type="email" id="ob-supplier-email" class="form-input" placeholder="supplier@email.com">
+            </div>
+          </div>
+          <div class="form-error" id="step2-error"></div>
+          <div class="ob-actions">
+            <span class="ob-skip" onclick="skipStep(2)">Skip for now</span>
+            <button class="btn btn-primary" onclick="nextStep(2)">Continue &rarr;</button>
+          </div>
+        </div>
+
+        <!-- Step 3: First Product -->
+        <div class="ob-step" id="step-3">
+          <div class="ob-step-num">Step 3 of 4</div>
+          <h2>Add your first product</h2>
+          <p>What do you import and sell? Add your first product.</p>
+          <div class="form-group">
+            <label class="form-label">Product Name <span class="required">*</span></label>
+            <input type="text" id="ob-product-name" class="form-input" placeholder="Premium Yoga Mat">
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">SKU</label>
+              <input type="text" id="ob-product-sku" class="form-input" placeholder="YM-001">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select id="ob-product-cat" class="form-select">
+                <option>Electronics</option>
+                <option>Apparel</option>
+                <option>Home &amp; Garden</option>
+                <option>Sports &amp; Outdoors</option>
+                <option>Health &amp; Beauty</option>
+                <option>Toys &amp; Games</option>
+                <option>Pet Supplies</option>
+                <option>Auto &amp; Industrial</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Selling Price (USD)</label>
+              <input type="number" id="ob-product-sell" class="form-input" placeholder="29.99" step="0.01">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cost Price (USD)</label>
+              <input type="number" id="ob-product-cost" class="form-input" placeholder="8.50" step="0.01">
+            </div>
+          </div>
+          <div class="form-error" id="step3-error"></div>
+          <div class="ob-actions">
+            <span class="ob-skip" onclick="skipStep(3)">Skip for now</span>
+            <button class="btn btn-primary" onclick="nextStep(3)">Continue &rarr;</button>
+          </div>
+        </div>
+
+        <!-- Step 4: Connect Store -->
+        <div class="ob-step" id="step-4">
+          <div class="ob-step-num">Step 4 of 4</div>
+          <h2>Connect your store</h2>
+          <p>Sync products and inventory automatically. You can always do this later in Settings.</p>
+          <div class="platform-grid">
+            <div class="platform-btn" onclick="selectPlatform(this, 'shopify')">
+              <div style="font-size:28px;margin-bottom:8px">&#x1F6CD;&#xFE0F;</div>
+              Shopify
+            </div>
+            <div class="platform-btn" onclick="selectPlatform(this, 'woocommerce')">
+              <div style="font-size:28px;margin-bottom:8px">&#x1F537;</div>
+              WooCommerce
+            </div>
+            <div class="platform-btn" onclick="selectPlatform(this, 'bigcommerce')">
+              <div style="font-size:28px;margin-bottom:8px">&#x1F3EC;</div>
+              BigCommerce
+            </div>
+            <div class="platform-btn" onclick="selectPlatform(this, 'other')">
+              <div style="font-size:28px;margin-bottom:8px">&#x1F310;</div>
+              Other / Later
+            </div>
+          </div>
+          <div class="ob-actions" style="margin-top:32px">
+            <span></span>
+            <button class="btn btn-primary" onclick="finishOnboarding()" id="finish-btn">
+              Go to Dashboard &rarr;
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script>
+    let currentStep = 1
+    let savedSupplierId = null
+
+    async function nextStep(step) {
+      const user = await window.getUser()
+      if (!user) { window.location.href = '/'; return }
+
+      if (step === 1) {
+        const name = document.getElementById('ob-name').value.trim()
+        const company = document.getElementById('ob-company').value.trim()
+        if (!name || !company) {
+          document.getElementById('step1-error').textContent = 'Please fill in your name and company.'
+          return
+        }
+        await window._sb.from('user_profiles').upsert({
+          user_id: user.id,
+          full_name: name,
+          company_name: company,
+          timezone: document.getElementById('ob-timezone').value
+        })
+      }
+
+      if (step === 2) {
+        const name = document.getElementById('ob-supplier-name').value.trim()
+        if (!name) {
+          document.getElementById('step2-error').textContent = 'Please enter a supplier name.'
+          return
+        }
+        const { data } = await window._sb.from('suppliers').insert({
+          user_id: user.id,
+          company_name: name,
+          country: document.getElementById('ob-supplier-country').value,
+          lead_time_days: parseInt(document.getElementById('ob-supplier-lead').value) || 30,
+          email: document.getElementById('ob-supplier-email').value.trim()
+        }).select().single()
+        if (data) savedSupplierId = data.id
+      }
+
+      if (step === 3) {
+        const name = document.getElementById('ob-product-name').value.trim()
+        if (!name) {
+          document.getElementById('step3-error').textContent = 'Please enter a product name.'
+          return
+        }
+        const cost = parseFloat(document.getElementById('ob-product-cost').value) || 0
+        const sell = parseFloat(document.getElementById('ob-product-sell').value) || 0
+        const landed = window.calcLandedCost(cost, 0, 0)
+        const margin = window.calcMargin(sell, landed)
+        await window._sb.from('products').insert({
+          user_id: user.id,
+          name,
+          sku: document.getElementById('ob-product-sku').value.trim(),
+          category: document.getElementById('ob-product-cat').value,
+          selling_price: sell,
+          cost_price: cost,
+          landed_cost: landed,
+          margin_percent: margin,
+          primary_supplier_id: savedSupplierId || null
+        })
+      }
+
+      goToStep(step + 1)
+    }
+
+    function skipStep(step) {
+      goToStep(step + 1)
+    }
+
+    function goToStep(n) {
+      document.getElementById('step-' + currentStep).classList.remove('active')
+      currentStep = n
+      document.getElementById('step-' + n).classList.add('active')
+      document.getElementById('ob-progress').style.width = (n * 25) + '%'
+    }
+
+    function selectPlatform(el, p) {
+      document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('selected'))
+      el.classList.add('selected')
+      if (p !== 'other') {
+        document.getElementById('finish-btn').innerHTML = 'Set up ' + p.charAt(0).toUpperCase() + p.slice(1) + ' later &rarr;'
+      } else {
+        document.getElementById('finish-btn').innerHTML = 'Go to Dashboard &rarr;'
+      }
+    }
+
+    async function finishOnboarding() {
+      const user = await window.getUser()
+      if (user) {
+        await window._sb.from('user_profiles').upsert({
+          user_id: user.id,
+          onboarding_completed: true
+        })
+      }
+      window.location.href = '/dashboard.html'
+    }
+  </script>
+</body>
+</html>

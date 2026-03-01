@@ -4,662 +4,352 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Supploxi — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="/js/supabase-client.js"></script>
-  <script src="/js/layout.js"></script>
   <style>
-    .perf-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .perf-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 22px;
-      transition: border-color .15s;
-    }
-
-    .perf-card:hover {
-      border-color: var(--border-light);
-    }
-
-    .perf-card-name {
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 14px;
-      color: var(--text);
-    }
-
-    .perf-score {
-      font-size: 2rem;
-      font-weight: 800;
-      letter-spacing: -.03em;
-      line-height: 1;
-      margin-bottom: 16px;
-    }
-
-    .perf-score-good { color: var(--primary); }
-    .perf-score-ok { color: var(--warning); }
-    .perf-score-bad { color: var(--danger); }
-
-    .perf-detail {
+    .reorder-card {
+      border-left: 3px solid;
+      padding: 16px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      padding: 8px 0;
+      gap: 16px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .reorder-card:hover { background: var(--bg-hover); }
+    .reorder-card.critical { border-color: var(--red); background: rgba(239,68,68,0.04); }
+    .reorder-card.soon { border-color: var(--orange); background: rgba(245,158,11,0.04); }
+    .reorder-card.monitor { border-color: var(--blue); background: rgba(59,130,246,0.04); }
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
       border-bottom: 1px solid var(--border);
-      font-size: .8rem;
     }
-
-    .perf-detail:last-child {
-      border-bottom: none;
-    }
-
-    .perf-detail-label {
-      color: var(--text-muted);
-    }
-
-    .perf-detail-value {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    .alert-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 22px;
-      border-bottom: 1px solid rgba(255,255,255,.03);
-      gap: 16px;
-    }
-
-    .alert-row:last-child {
-      border-bottom: none;
-    }
-
-    .alert-row:hover {
-      background: rgba(255,255,255,.02);
-    }
-
-    .alert-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .alert-product {
-      font-size: .85rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 2px;
-    }
-
-    .alert-supplier {
-      font-size: .75rem;
-      color: var(--text-muted);
-    }
-
-    .alert-metrics {
-      display: flex;
-      align-items: center;
-      gap: 20px;
+    .activity-item:last-child { border-bottom: none; }
+    .activity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 6px;
       flex-shrink: 0;
     }
-
-    .alert-metric {
-      text-align: center;
+    .performance-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
     }
-
-    .alert-metric-value {
-      font-size: .85rem;
+    .score-display {
+      font-size: 36px;
       font-weight: 700;
-      color: var(--text);
     }
-
-    .alert-metric-label {
-      font-size: .65rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: .04em;
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
     }
-
-    .alert-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-    }
-
-    .section-header-icon {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-header-icon svg {
-      width: 20px;
-      height: 20px;
-    }
-
     @media (max-width: 1024px) {
-      .perf-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .tracking-update-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 12px 22px;
-      border-bottom: 1px solid rgba(255,255,255,.03);
-      transition: background .1s;
-    }
-    .tracking-update-row:last-child { border-bottom: none; }
-    .tracking-update-row:hover { background: rgba(255,255,255,.02); }
-
-    .tracking-update-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-    .tracking-update-icon.transit { background: rgba(59,130,246,.15); }
-    .tracking-update-icon.delivered { background: rgba(0,212,170,.15); }
-    .tracking-update-icon.exception { background: rgba(255,71,87,.15); }
-    .tracking-update-icon.customs { background: rgba(245,158,11,.15); }
-
-    .tracking-update-info { flex: 1; min-width: 0; }
-    .tracking-update-tracking {
-      font-size: .85rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 2px;
-    }
-    .tracking-update-tracking a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-    .tracking-update-tracking a:hover { text-decoration: underline; }
-    .tracking-update-desc {
-      font-size: .75rem;
-      color: var(--text-muted);
-    }
-    .tracking-update-time {
-      font-size: .7rem;
-      color: var(--text-dim);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    @media (max-width: 768px) {
-      .alert-metrics {
-        display: none;
-      }
+      .dashboard-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <div class="main" id="mainContent">
-    <div class="loading" id="loadingState">
-      <div class="spinner"></div>
-      Loading dashboard...
-    </div>
+  <div class="main-content">
+    <div class="page-content">
 
-    <div id="dashboardContent" style="display:none">
-      <!-- PAGE HEADER -->
-      <div class="page-header">
-        <h2>Dashboard</h2>
+      <!-- ONBOARDING CHECKLIST -->
+      <div id="onboarding-checklist" style="display:none" class="onboarding-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <h3 style="font-size:16px;font-weight:600;color:var(--green)">Get started with Supploxi</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:2px">Complete these steps to unlock the full power of your dashboard</p>
+          </div>
+          <div id="checklist-progress" style="font-size:13px;font-weight:600;color:var(--green)"></div>
+        </div>
+        <div id="checklist-items"></div>
       </div>
 
       <!-- STAT CARDS -->
-      <div class="stats-grid">
+      <div class="stats-grid" id="stats-grid">
         <div class="stat-card">
           <div class="stat-label">Total Suppliers</div>
-          <div class="stat-value" id="statSuppliers">—</div>
-          <div class="stat-sub" id="statSuppliersDesc">Loading...</div>
+          <div class="stat-value" id="stat-suppliers">&mdash;</div>
+          <div class="stat-sub" id="stat-suppliers-sub">Loading...</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Active Shipments</div>
-          <div class="stat-value" id="statShipments">—</div>
-          <div class="stat-sub" id="statShipmentsDesc">Loading...</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Pending Orders</div>
-          <div class="stat-value" id="statOrders">—</div>
-          <div class="stat-sub" id="statOrdersDesc">Loading...</div>
+          <div class="stat-label">Shipments in Transit</div>
+          <div class="stat-value" id="stat-shipments">&mdash;</div>
+          <div class="stat-sub" id="stat-shipments-sub">Loading...</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Low Stock Alerts</div>
-          <div class="stat-value" id="statAlerts">—</div>
-          <div class="stat-sub" id="statAlertsDesc">Loading...</div>
+          <div class="stat-value" id="stat-lowstock">&mdash;</div>
+          <div class="stat-sub" id="stat-lowstock-sub">Loading...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending Orders</div>
+          <div class="stat-value" id="stat-orders">&mdash;</div>
+          <div class="stat-sub" id="stat-orders-sub">Loading...</div>
         </div>
       </div>
 
-      <!-- SHIPMENTS IN TRANSIT -->
-      <div class="section" id="shipmentsSection">
-        <div class="section-header">
-          <h3>Shipments in Transit</h3>
+      <div class="dashboard-grid">
+        <div>
+          <!-- AI REORDER ALERTS -->
+          <div class="card" style="margin-bottom:24px">
+            <div class="card-header">
+              <span class="card-title">AI Reorder Alerts</span>
+              <a href="/products.html" style="font-size:13px;color:var(--green)">View all products &rarr;</a>
+            </div>
+            <div id="reorder-alerts">
+              <div class="empty-state" style="padding:30px">
+                <div class="empty-state-icon">&#x1F4E6;</div>
+                <h3>No alerts</h3>
+                <p>All stock levels are healthy</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- SHIPMENTS IN TRANSIT -->
+          <div class="table-container">
+            <div class="table-header" style="justify-content:space-between">
+              <span style="font-weight:600;font-size:15px">Shipments in Transit</span>
+              <a href="/shipments.html" style="font-size:13px;color:var(--green)">View all &rarr;</a>
+            </div>
+            <div id="shipments-table">
+              <div class="empty-state">
+                <div class="empty-state-icon">&#x2708;&#xFE0F;</div>
+                <h3>No active shipments</h3>
+                <p>Add a shipment to start tracking</p>
+                <a href="/shipments.html" class="btn btn-primary btn-sm">Add Shipment</a>
+              </div>
+            </div>
+          </div>
         </div>
-        <div id="shipmentsContent">
-          <div class="loading">
-            <div class="spinner"></div>
-            Loading shipments...
+
+        <div>
+          <!-- SUPPLIER PERFORMANCE -->
+          <div class="card" style="margin-bottom:24px">
+            <div class="card-header">
+              <span class="card-title">Top Suppliers</span>
+              <a href="/suppliers.html" style="font-size:13px;color:var(--green)">All &rarr;</a>
+            </div>
+            <div id="supplier-performance">
+              <div class="empty-state" style="padding:20px"><p>No suppliers yet</p></div>
+            </div>
+          </div>
+
+          <!-- RECENT ACTIVITY -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Recent Activity</span>
+            </div>
+            <div id="recent-activity">
+              <div class="empty-state" style="padding:20px"><p>No recent activity</p></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- RECENT TRACKING UPDATES -->
-      <div class="section" id="trackingUpdatesSection">
-        <div class="section-header">
-          <div class="section-header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
-            <h3>Recent Tracking Updates</h3>
-          </div>
-        </div>
-        <div id="trackingUpdatesContent">
-          <div class="loading">
-            <div class="spinner"></div>
-            Loading tracking updates...
-          </div>
-        </div>
-      </div>
-
-      <!-- AI REORDER ALERTS -->
-      <div class="section" id="reorderSection">
-        <div class="section-header">
-          <div class="section-header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <circle cx="12" cy="5" r="4"></circle>
-              <line x1="9" y1="4" x2="9" y2="6"></line>
-              <line x1="15" y1="4" x2="15" y2="6"></line>
-              <line x1="9" y1="16" x2="9" y2="16.01"></line>
-              <line x1="15" y1="16" x2="15" y2="16.01"></line>
-            </svg>
-            <h3>AI Reorder Alerts</h3>
-          </div>
-        </div>
-        <div id="reorderContent">
-          <div class="loading">
-            <div class="spinner"></div>
-            Analyzing stock levels...
-          </div>
-        </div>
-      </div>
-
-      <!-- SUPPLIER PERFORMANCE -->
-      <div style="margin-bottom: 24px;">
-        <div class="page-header" style="margin-bottom: 16px;">
-          <h2 style="font-size: 1rem; font-weight: 700;">Supplier Performance</h2>
-        </div>
-        <div id="perfContent">
-          <div class="loading">
-            <div class="spinner"></div>
-            Loading performance data...
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script src="/js/layout.js"></script>
   <script>
-    (async function init() {
-      // Require authentication before anything else
-      await requireAuth();
-      renderLayout('dashboard');
+    async function loadDashboard() {
+      const user = await window.requireAuth()
 
-      // Show dashboard content and hide initial loader
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('dashboardContent').style.display = 'block';
+      await window.initLayout({ page: 'dashboard', title: 'Dashboard' })
 
-      // Load all sections in parallel
-      await Promise.allSettled([
-        loadStats(),
-        loadShipments(),
-        loadTrackingUpdates(),
-        loadReorderAlerts(),
-        loadSupplierPerformance()
-      ]);
-    })();
-
-    // =============================================
-    // STAT CARDS
-    // =============================================
-    async function loadStats() {
-      const sb = window._supabase;
-      const user = await getCurrentUser();
-      const userId = user.id;
-
-      // Run all count queries in parallel
-      const [suppliersRes, shipmentsRes, ordersRes, alertsRes] = await Promise.all([
-        sb.from('suppliers').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-        sb.from('shipments').select('id', { count: 'exact', head: true }).eq('user_id', userId).neq('status', 'delivered'),
-        sb.from('purchase_orders').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', ['pending', 'processing', 'draft']),
-        sb.from('products').select('id, stock_quantity, reorder_point', { count: 'exact' }).eq('user_id', userId).lte('stock_quantity', 0) // placeholder; real filter below
-      ]);
-
-      // Total Suppliers
-      const suppliersCount = suppliersRes.count || 0;
-      document.getElementById('statSuppliers').textContent = suppliersCount;
-      document.getElementById('statSuppliersDesc').textContent = suppliersCount === 0
-        ? 'Add your first supplier'
-        : suppliersCount === 1 ? '1 supplier registered' : suppliersCount + ' suppliers registered';
-
-      // Active Shipments
-      const shipmentsCount = shipmentsRes.count || 0;
-      document.getElementById('statShipments').textContent = shipmentsCount;
-      document.getElementById('statShipmentsDesc').textContent = shipmentsCount === 0
-        ? 'No active shipments'
-        : shipmentsCount === 1 ? '1 shipment in transit' : shipmentsCount + ' shipments in transit';
-
-      // Pending Orders
-      const ordersCount = ordersRes.count || 0;
-      document.getElementById('statOrders').textContent = ordersCount;
-      document.getElementById('statOrdersDesc').textContent = ordersCount === 0
-        ? 'No pending orders'
-        : ordersCount === 1 ? '1 order needs attention' : ordersCount + ' orders need attention';
-
-      // Low Stock Alerts - need to filter where stock_quantity <= reorder_point
-      // Re-query with proper RPC or client-side filter
-      const { data: productsData } = await sb
-        .from('products')
-        .select('id, stock_quantity, reorder_point')
-        .eq('user_id', userId);
-
-      const lowStockCount = (productsData || []).filter(
-        p => p.stock_quantity != null && p.reorder_point != null && p.stock_quantity <= p.reorder_point
-      ).length;
-
-      document.getElementById('statAlerts').textContent = lowStockCount;
-      const alertsDescEl = document.getElementById('statAlertsDesc');
-      if (lowStockCount === 0) {
-        alertsDescEl.textContent = 'All stock levels OK';
-        alertsDescEl.className = 'stat-sub up';
-      } else {
-        alertsDescEl.textContent = lowStockCount === 1 ? '1 product below reorder point' : lowStockCount + ' products below reorder point';
-        alertsDescEl.className = 'stat-sub down';
-      }
-    }
-
-    // =============================================
-    // SHIPMENTS IN TRANSIT
-    // =============================================
-    async function loadShipments() {
-      const sb = window._supabase;
-      const user = await getCurrentUser();
-      const container = document.getElementById('shipmentsContent');
-
-      const { data: shipments, error } = await sb
-        .from('shipments')
-        .select('*, suppliers(company_name, country)')
+      // Check onboarding
+      const { data: profile } = await window._sb
+        .from('user_profiles')
+        .select('*')
         .eq('user_id', user.id)
-        .neq('status', 'delivered')
-        .order('estimated_arrival', { ascending: true });
+        .single()
 
-      if (error) {
-        container.innerHTML = '<div class="empty-state"><p>Failed to load shipments</p><small>' + escapeHtml(error.message) + '</small></div>';
-        return;
+      if (!profile) {
+        window.location.href = '/onboarding.html'
+        return
       }
 
-      if (!shipments || shipments.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>No shipments in transit</p><small>Active shipments will appear here</small></div>';
-        return;
+      // Load all data in parallel
+      const [
+        { data: suppliers },
+        { data: shipments },
+        { data: products },
+        { data: orders }
+      ] = await Promise.all([
+        window._sb.from('suppliers').select('*').eq('user_id', user.id),
+        window._sb.from('shipments').select('*, suppliers(company_name)').eq('user_id', user.id).neq('status', 'delivered'),
+        window._sb.from('products').select('*, suppliers(company_name, lead_time_days)').eq('user_id', user.id),
+        window._sb.from('purchase_orders').select('*').eq('user_id', user.id).not('status', 'in', '("received","cancelled")')
+      ])
+
+      // --- STAT CARDS ---
+      const activeSuppliers = suppliers?.filter(s => s.status === 'active').length || 0
+      document.getElementById('stat-suppliers').textContent = suppliers?.length || 0
+      document.getElementById('stat-suppliers-sub').textContent = activeSuppliers + ' active'
+
+      const arrivingSoon = shipments?.filter(s => {
+        if (!s.estimated_arrival) return false
+        const days = (new Date(s.estimated_arrival) - new Date()) / 86400000
+        return days >= 0 && days <= 7
+      }).length || 0
+      document.getElementById('stat-shipments').textContent = shipments?.length || 0
+      document.getElementById('stat-shipments-sub').textContent = arrivingSoon + ' arriving this week'
+
+      // Low stock alerts
+      const alerts = products?.map(p => {
+        const supplier = p.suppliers
+        const result = window.calcReorderAlert({
+          ...p,
+          lead_time_days: supplier?.lead_time_days || 30
+        })
+        return { ...p, alert: result }
+      }).filter(p => p.alert.urgency !== 'ok') || []
+
+      const criticalCount = alerts.filter(p => p.alert.urgency === 'critical').length
+      document.getElementById('stat-lowstock').textContent = alerts.length
+      const lowStockSub = document.getElementById('stat-lowstock-sub')
+      lowStockSub.textContent = criticalCount > 0 ? criticalCount + ' critical' : 'All levels OK'
+      lowStockSub.className = criticalCount > 0 ? 'stat-sub red' : 'stat-sub green'
+
+      const ordersTotal = orders?.reduce((sum, o) => sum + (o.total_value || 0), 0) || 0
+      document.getElementById('stat-orders').textContent = orders?.length || 0
+      document.getElementById('stat-orders-sub').textContent = window.formatCurrency(ordersTotal) + ' open value'
+
+      // --- ONBOARDING CHECKLIST ---
+      const checks = [
+        { done: (suppliers?.length || 0) > 0, label: 'Add your first supplier', href: '/suppliers.html', action: '+ Add Supplier' },
+        { done: (products?.length || 0) > 0, label: 'Add a product', href: '/products.html', action: '+ Add Product' },
+        { done: (orders?.length || 0) > 0, label: 'Create a purchase order', href: '/purchase-orders.html', action: '+ Create Order' },
+        { done: (shipments?.length || 0) > 0, label: 'Track a shipment', href: '/shipments.html', action: '+ Add Shipment' },
+      ]
+      const doneCount = checks.filter(c => c.done).length
+      if (doneCount < 4) {
+        document.getElementById('onboarding-checklist').style.display = 'block'
+        document.getElementById('checklist-progress').textContent = doneCount + '/4 complete'
+        document.getElementById('checklist-items').innerHTML = checks.map(c => `
+          <div class="checklist-item">
+            <div class="checklist-check ${c.done ? 'done' : ''}">
+              ${c.done ? '&#x2713;' : ''}
+            </div>
+            <span style="flex:1;font-size:14px;${c.done ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">${c.label}</span>
+            ${!c.done ? '<a href="' + c.href + '" class="btn btn-sm btn-secondary">' + c.action + '</a>' : ''}
+          </div>
+        `).join('')
       }
 
-      let rows = '';
-      shipments.forEach(function(s) {
-        const supplierName = s.suppliers ? escapeHtml(s.suppliers.company_name) : '—';
-        const origin = s.suppliers && s.suppliers.country
-          ? countryFlag(s.suppliers.country) + ' ' + escapeHtml(s.suppliers.country)
-          : s.origin_country ? escapeHtml(s.origin_country) : '—';
-        const badge = statusBadge(s.status);
-        const eta = s.estimated_arrival ? formatDate(s.estimated_arrival) : '—';
-        const daysInTransit = s.ship_date ? daysBetween(s.ship_date, new Date()) : '—';
-        const tracking = s.tracking_number ? escapeHtml(s.tracking_number) : '—';
-
-        rows += '<tr>' +
-          '<td class="cell-primary">' + tracking + '</td>' +
-          '<td>' + supplierName + '</td>' +
-          '<td>' + origin + '</td>' +
-          '<td>' + badge + '</td>' +
-          '<td>' + eta + '</td>' +
-          '<td>' + daysInTransit + (typeof daysInTransit === 'number' ? ' days' : '') + '</td>' +
-        '</tr>';
-      });
-
-      container.innerHTML =
-        '<table>' +
-          '<thead>' +
-            '<tr>' +
-              '<th>Tracking Number</th>' +
-              '<th>Supplier</th>' +
-              '<th>Origin</th>' +
-              '<th>Status</th>' +
-              '<th>ETA</th>' +
-              '<th>Days in Transit</th>' +
-            '</tr>' +
-          '</thead>' +
-          '<tbody>' + rows + '</tbody>' +
-        '</table>';
-    }
-
-    // =============================================
-    // AI REORDER ALERTS
-    // =============================================
-    async function loadReorderAlerts() {
-      const sb = window._supabase;
-      const user = await getCurrentUser();
-      const container = document.getElementById('reorderContent');
-
-      const { data: products, error } = await sb
-        .from('products')
-        .select('*, suppliers(company_name, lead_time_days)')
-        .eq('user_id', user.id);
-
-      if (error) {
-        container.innerHTML = '<div class="empty-state"><p>Failed to load products</p><small>' + escapeHtml(error.message) + '</small></div>';
-        return;
+      // --- AI REORDER ALERTS ---
+      if (alerts.length > 0) {
+        document.getElementById('reorder-alerts').innerHTML = alerts.slice(0, 5).map(p => `
+          <div class="reorder-card ${p.alert.urgency}" onclick="window.location.href='/products.html'">
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:14px">${window.escapeHtml(p.name)}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${window.escapeHtml(p.suppliers?.company_name || 'No supplier')} &middot; ${p.stock_quantity} units left</div>
+            </div>
+            <div style="text-align:right">
+              <div class="badge ${p.alert.urgency === 'critical' ? 'badge-red' : p.alert.urgency === 'soon' ? 'badge-orange' : 'badge-blue'}" style="margin-bottom:4px">${p.alert.urgency.toUpperCase()}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${window.escapeHtml(p.alert.message)}</div>
+            </div>
+            <a href="/purchase-orders.html?supplier=${p.primary_supplier_id || ''}" class="btn btn-sm btn-secondary" onclick="event.stopPropagation()">Create PO</a>
+          </div>
+        `).join('')
       }
 
-      if (!products || products.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>No products to analyze</p><small>Add products to get AI-powered reorder suggestions</small></div>';
-        return;
+      // --- SHIPMENTS TABLE ---
+      if (shipments?.length > 0) {
+        document.getElementById('shipments-table').innerHTML = `
+          <div class="table-responsive">
+          <table>
+            <thead><tr>
+              <th>Tracking #</th>
+              <th>Supplier</th>
+              <th>Status</th>
+              <th>ETA</th>
+              <th>Days</th>
+              <th>Last Event</th>
+            </tr></thead>
+            <tbody>
+              ${shipments.slice(0, 6).map(s => `
+                <tr onclick="window.location.href='/shipment-detail.html?id=${s.id}'">
+                  <td><strong>${window.escapeHtml(s.tracking_number)}</strong></td>
+                  <td>${window.escapeHtml(s.suppliers?.company_name || '\u2014')}</td>
+                  <td>${window.getStatusBadge(s.status)}</td>
+                  <td>${window.formatDate(s.estimated_arrival)}</td>
+                  <td>${s.days_in_transit || 0}d</td>
+                  <td style="font-size:12px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${window.escapeHtml(s.last_event || '\u2014')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          </div>
+        `
       }
 
-      // Calculate reorder suggestions for each product
-      var alerts = [];
-      products.forEach(function(p) {
-        p.lead_time_days = (p.suppliers && p.suppliers.lead_time_days) ? p.suppliers.lead_time_days : 14;
-        var suggestion = calculateReorderSuggestion(p);
-        if (suggestion.urgency === 'critical' || suggestion.urgency === 'soon') {
-          alerts.push({
-            product: p,
-            suggestion: suggestion,
-            supplierName: p.suppliers ? p.suppliers.company_name : 'Unknown Supplier'
-          });
-        }
-      });
-
-      // Sort: critical first, then soon
-      alerts.sort(function(a, b) {
-        if (a.suggestion.urgency === 'critical' && b.suggestion.urgency !== 'critical') return -1;
-        if (a.suggestion.urgency !== 'critical' && b.suggestion.urgency === 'critical') return 1;
-        return (a.suggestion.daysUntilStockout || 0) - (b.suggestion.daysUntilStockout || 0);
-      });
-
-      if (alerts.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>No reorder alerts</p><small>All products have healthy stock levels</small></div>';
-        return;
+      // --- SUPPLIER PERFORMANCE ---
+      if (suppliers?.length > 0) {
+        const top = [...suppliers].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3)
+        document.getElementById('supplier-performance').innerHTML = top.map(s => {
+          const scoreColor = (s.score || 100) >= 80 ? 'var(--green)' : (s.score || 100) >= 60 ? 'var(--orange)' : 'var(--red)'
+          return `
+          <div class="performance-card" style="margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <div style="font-weight:600;font-size:14px">${window.escapeHtml(s.company_name)}</div>
+                <div style="font-size:12px;color:var(--text-muted)">${s.country || 'China'}</div>
+              </div>
+              <div class="score-display" style="font-size:28px;color:${scoreColor}">${s.score || 100}<span style="font-size:14px;font-weight:400;color:var(--text-muted)">/100</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+              <div><span style="color:var(--text-muted)">On-Time:</span> <strong>${s.on_time_rate || 100}%</strong></div>
+              <div><span style="color:var(--text-muted)">Lead Time:</span> <strong>${s.lead_time_days || 30}d</strong></div>
+              <div><span style="color:var(--text-muted)">Orders:</span> <strong>${s.total_orders || 0}</strong></div>
+              <div><span style="color:var(--text-muted)">Spent:</span> <strong>${window.formatCurrency(s.total_spent || 0)}</strong></div>
+            </div>
+          </div>
+        `}).join('')
       }
 
-      var html = '';
-      alerts.forEach(function(alert) {
-        var s = alert.suggestion;
-        var p = alert.product;
-        var urgencyClass = s.urgency === 'critical' ? 'badge-critical' : 'badge-soon';
-        var daysText = s.daysUntilStockout != null ? s.daysUntilStockout : '—';
-
-        html += '<div class="alert-row">' +
-          '<div class="alert-info">' +
-            '<div class="alert-product">' + escapeHtml(p.name || p.product_name || 'Unnamed Product') + '</div>' +
-            '<div class="alert-supplier">' + escapeHtml(alert.supplierName) + '</div>' +
-          '</div>' +
-          '<div class="alert-metrics">' +
-            '<div class="alert-metric">' +
-              '<div class="alert-metric-value">' + (p.stock_quantity != null ? p.stock_quantity : '—') + '</div>' +
-              '<div class="alert-metric-label">Current Stock</div>' +
-            '</div>' +
-            '<div class="alert-metric">' +
-              '<div class="alert-metric-value">' + daysText + '</div>' +
-              '<div class="alert-metric-label">Days Until Stockout</div>' +
-            '</div>' +
-            '<div class="alert-metric">' +
-              '<div class="alert-metric-value">' + (s.suggestedQty != null ? s.suggestedQty : '—') + '</div>' +
-              '<div class="alert-metric-label">Suggested Qty</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="alert-actions">' +
-            '<span class="badge ' + urgencyClass + '">' + escapeHtml(s.urgency) + '</span>' +
-            '<button class="btn btn-primary btn-sm" onclick="createOrderFromAlert(\'' + escapeHtml(String(p.id)) + '\')">Create Order</button>' +
-          '</div>' +
-        '</div>';
-      });
-
-      container.innerHTML = html;
-    }
-
-    function createOrderFromAlert(productId) {
-      // Navigate to orders page with pre-filled product
-      window.location.href = '/purchase-orders.html?action=add';
-    }
-
-    // =============================================
-    // RECENT TRACKING UPDATES
-    // =============================================
-    async function loadTrackingUpdates() {
-      const sb = window._supabase;
-      const user = await getCurrentUser();
-      const container = document.getElementById('trackingUpdatesContent');
-
-      // Get recent tracking events from 17Track source
-      const { data: events, error } = await sb
-        .from('tracking_events')
-        .select('*, shipments!inner(id, tracking_number, status, user_id)')
-        .eq('shipments.user_id', user.id)
-        .eq('source', '17track')
-        .order('event_date', { ascending: false })
-        .limit(8);
-
-      if (error) {
-        container.innerHTML = '<div class="empty-state"><p>Failed to load tracking updates</p></div>';
-        return;
-      }
-
-      if (!events || events.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>No tracking updates yet</p><small>Updates will appear here as shipments are tracked via 17Track</small></div>';
-        return;
-      }
-
-      var html = '';
-      events.forEach(function(ev) {
-        var tracking = ev.shipments ? ev.shipments.tracking_number : '—';
-        var shipId = ev.shipments ? ev.shipments.id : '';
-        var status = ev.shipments ? (ev.shipments.status || '').toLowerCase() : '';
-
-        var iconClass = 'transit';
-        var iconEmoji = '&#x1F6A2;';
-        if (status === 'delivered') { iconClass = 'delivered'; iconEmoji = '&#x2705;'; }
-        else if (status === 'exception') { iconClass = 'exception'; iconEmoji = '&#x26A0;'; }
-        else if (status === 'customs') { iconClass = 'customs'; iconEmoji = '&#x1F6C3;'; }
-        else if (status === 'out for delivery') { iconClass = 'delivered'; iconEmoji = '&#x1F69A;'; }
-
-        var timeText = '—';
-        if (ev.event_date) {
-          var diffMs = Date.now() - new Date(ev.event_date).getTime();
-          var mins = Math.floor(diffMs / 60000);
-          if (mins < 1) timeText = 'just now';
-          else if (mins < 60) timeText = mins + 'm ago';
-          else if (mins < 1440) timeText = Math.floor(mins / 60) + 'h ago';
-          else timeText = Math.floor(mins / 1440) + 'd ago';
-        }
-
-        html += '<div class="tracking-update-row">' +
-          '<div class="tracking-update-icon ' + iconClass + '">' + iconEmoji + '</div>' +
-          '<div class="tracking-update-info">' +
-            '<div class="tracking-update-tracking"><a href="/shipment-detail.html?id=' + escapeHtml(shipId) + '">' + escapeHtml(tracking) + '</a></div>' +
-            '<div class="tracking-update-desc">' + escapeHtml(ev.description || 'Status update') + (ev.location ? ' — ' + escapeHtml(ev.location) : '') + '</div>' +
-          '</div>' +
-          '<div class="tracking-update-time">' + timeText + '</div>' +
-        '</div>';
-      });
-
-      container.innerHTML = html;
-    }
-
-    // =============================================
-    // SUPPLIER PERFORMANCE
-    // =============================================
-    async function loadSupplierPerformance() {
-      const sb = window._supabase;
-      const user = await getCurrentUser();
-      const container = document.getElementById('perfContent');
-
-      const { data: suppliers, error } = await sb
-        .from('suppliers')
-        .select('id, company_name, score, on_time_rate, lead_time_days, total_orders')
+      // --- RECENT ACTIVITY ---
+      const { data: notifs } = await window._sb
+        .from('notifications')
+        .select('*')
         .eq('user_id', user.id)
-        .order('score', { ascending: false })
-        .limit(3);
+        .order('created_at', { ascending: false })
+        .limit(5)
 
-      if (error) {
-        container.innerHTML = '<div class="empty-state"><p>Failed to load supplier data</p><small>' + escapeHtml(error.message) + '</small></div>';
-        return;
+      if (notifs?.length > 0) {
+        const colors = {
+          low_stock: 'var(--red)',
+          shipment_update: 'var(--blue)',
+          reorder_suggestion: 'var(--orange)',
+          customs_alert: 'var(--orange)',
+          po_reminder: 'var(--purple)'
+        }
+        document.getElementById('recent-activity').innerHTML = notifs.map(n => `
+          <div class="activity-item">
+            <div class="activity-dot" style="background:${colors[n.type] || 'var(--green)'}"></div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500">${window.escapeHtml(n.title)}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${window.formatRelativeTime(n.created_at)}</div>
+            </div>
+          </div>
+        `).join('')
       }
-
-      if (!suppliers || suppliers.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>No supplier performance data</p><small>Add suppliers and orders to see performance metrics</small></div>';
-        return;
-      }
-
-      var html = '<div class="perf-grid">';
-      suppliers.forEach(function(s) {
-        var score = s.score != null ? s.score : 0;
-        var scoreClass = score >= 75 ? 'perf-score-good' : (score >= 50 ? 'perf-score-ok' : 'perf-score-bad');
-        var onTimeRate = s.on_time_rate != null ? s.on_time_rate + '%' : '—';
-        var avgLeadTime = s.lead_time_days != null ? s.lead_time_days + ' days' : '—';
-        var totalOrders = s.total_orders != null ? s.total_orders : 0;
-
-        html += '<div class="perf-card">' +
-          '<div class="perf-card-name">' + escapeHtml(s.company_name) + '</div>' +
-          '<div class="perf-score ' + scoreClass + '">' + score + '<span style="font-size:.9rem;font-weight:500;color:var(--text-muted);margin-left:4px">/100</span></div>' +
-          '<div class="perf-detail">' +
-            '<span class="perf-detail-label">On-Time Rate</span>' +
-            '<span class="perf-detail-value">' + onTimeRate + '</span>' +
-          '</div>' +
-          '<div class="perf-detail">' +
-            '<span class="perf-detail-label">Avg Lead Time</span>' +
-            '<span class="perf-detail-value">' + avgLeadTime + '</span>' +
-          '</div>' +
-          '<div class="perf-detail">' +
-            '<span class="perf-detail-label">Total Orders</span>' +
-            '<span class="perf-detail-value">' + totalOrders + '</span>' +
-          '</div>' +
-        '</div>';
-      });
-      html += '</div>';
-
-      container.innerHTML = html;
     }
+
+    loadDashboard()
   </script>
 </body>
 </html>
