@@ -4,576 +4,391 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Supploxi — Suppliers</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="/js/supabase-client.js"></script>
-  <script src="/js/layout.js"></script>
+  <style>
+    .supplier-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+    .score-badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+    .rate-bar { height:4px; border-radius:2px; background:var(--border); overflow:hidden; margin-top:4px; }
+    .rate-fill { height:100%; border-radius:2px; }
+    .action-btns { display:flex; gap:6px; opacity:0; transition:opacity 0.15s; }
+    tr:hover .action-btns { opacity:1; }
+  </style>
 </head>
 <body>
+  <div class="main-content">
+    <div class="page-content">
 
-  <!-- Main Content Area -->
-  <div class="main" id="mainContent" style="display:none">
+      <!-- STATS -->
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card"><div class="stat-label">Total Suppliers</div><div class="stat-value" id="stat-total">—</div><div class="stat-sub" id="stat-total-sub">Loading...</div></div>
+        <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" id="stat-active">—</div><div class="stat-sub stat-sub green">Fully operational</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value" id="stat-score">—</div><div class="stat-sub">Out of 100</div></div>
+        <div class="stat-card"><div class="stat-label">Total Spent</div><div class="stat-value" id="stat-spent">—</div><div class="stat-sub">All time</div></div>
+      </div>
 
-    <!-- Page Header -->
-    <div class="page-header">
-      <h2>Suppliers</h2>
-      <button class="btn btn-primary" id="addSupplierBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Supplier
-      </button>
-    </div>
-
-    <!-- Filters Bar -->
-    <div class="filters-bar">
-      <input type="text" class="search-input" id="searchInput" placeholder="Search suppliers...">
-      <select class="filter-select" id="statusFilter">
-        <option value="">All Status</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-        <option value="on hold">On Hold</option>
-      </select>
-      <select class="filter-select" id="countryFilter">
-        <option value="">All Countries</option>
-        <option value="China">China</option>
-        <option value="India">India</option>
-        <option value="Vietnam">Vietnam</option>
-        <option value="Bangladesh">Bangladesh</option>
-        <option value="Turkey">Turkey</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
-
-    <!-- Suppliers Table Section -->
-    <div class="section">
-      <div id="suppliersTableWrap">
-        <div class="loading" id="loadingState">
-          <div class="spinner"></div>
-          Loading suppliers...
+      <!-- TABLE -->
+      <div class="table-container">
+        <div class="table-header">
+          <div class="search-wrapper" style="flex:1">
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" class="search-input" id="search" placeholder="Search suppliers..." oninput="renderTable()">
+          </div>
+          <select class="form-select" style="width:140px" id="filter-status" onchange="renderTable()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="on_hold">On Hold</option>
+          </select>
+          <select class="form-select" style="width:140px" id="filter-country" onchange="renderTable()">
+            <option value="">All Countries</option>
+            <option value="China">China</option>
+            <option value="India">India</option>
+            <option value="Vietnam">Vietnam</option>
+            <option value="Bangladesh">Bangladesh</option>
+            <option value="Turkey">Turkey</option>
+            <option value="Mexico">Mexico</option>
+          </select>
+          <button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button>
+        </div>
+        <div id="table-body">
+          <div class="empty-state"><div class="empty-state-icon">🏭</div><h3>No suppliers yet</h3><p>Add your first supplier to get started</p><button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button></div>
         </div>
       </div>
     </div>
-
   </div>
 
-  <!-- Add/Edit Supplier Modal -->
-  <div class="modal-overlay" id="supplierModal">
-    <div class="modal" style="max-width:620px">
+  <!-- MODAL ADD/EDIT -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
       <div class="modal-header">
-        <h3 id="modalTitle">Add Supplier</h3>
-        <button class="modal-close" id="modalCloseBtn">&times;</button>
+        <span class="modal-title" id="modal-title">Add Supplier</span>
+        <button class="modal-close" onclick="closeModal()">×</button>
       </div>
       <div class="modal-body">
-        <form id="supplierForm" autocomplete="off">
-          <input type="hidden" id="supplierId" value="">
-
+        <input type="hidden" id="edit-id">
+        <div class="form-grid">
           <div class="form-group">
-            <label for="companyName">Company Name *</label>
-            <input type="text" class="form-control" id="companyName" placeholder="e.g. Shenzhen Electronics Co." required>
+            <label class="form-label">Company Name <span class="required">*</span></label>
+            <input type="text" id="f-company" class="form-input" placeholder="Shenzhen ABC Co.">
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="contactName">Contact Name</label>
-              <input type="text" class="form-control" id="contactName" placeholder="e.g. Zhang Wei">
-            </div>
-            <div class="form-group">
-              <label for="contactEmail">Email</label>
-              <input type="email" class="form-control" id="contactEmail" placeholder="e.g. contact@supplier.com">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="contactPhone">Phone (WhatsApp preferred)</label>
-              <input type="text" class="form-control" id="contactPhone" placeholder="e.g. +86 138 0000 0000">
-            </div>
-            <div class="form-group">
-              <label for="supplierCountry">Country</label>
-              <select class="form-control" id="supplierCountry">
-                <option value="">Select country</option>
-                <option value="China">China</option>
-                <option value="India">India</option>
-                <option value="Vietnam">Vietnam</option>
-                <option value="Bangladesh">Bangladesh</option>
-                <option value="Turkey">Turkey</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="supplierCity">City</label>
-              <input type="text" class="form-control" id="supplierCity" placeholder="e.g. Shenzhen">
-            </div>
-            <div class="form-group">
-              <label for="supplierCategory">Category</label>
-              <select class="form-control" id="supplierCategory">
-                <option value="">Select category</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Apparel">Apparel</option>
-                <option value="Home & Garden">Home & Garden</option>
-                <option value="Sports">Sports</option>
-                <option value="Beauty">Beauty</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="paymentTerms">Payment Terms</label>
-              <select class="form-control" id="paymentTerms">
-                <option value="">Select terms</option>
-                <option value="Net 30">Net 30</option>
-                <option value="Net 60">Net 60</option>
-                <option value="Prepaid">Prepaid</option>
-                <option value="50/50">50/50</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="leadTime">Lead Time (days)</label>
-              <input type="number" class="form-control" id="leadTime" placeholder="e.g. 30" min="0">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="moq">Minimum Order Quantity</label>
-              <input type="number" class="form-control" id="moq" placeholder="e.g. 500" min="0">
-            </div>
-            <div class="form-group">
-              <label for="supplierCurrency">Currency</label>
-              <select class="form-control" id="supplierCurrency">
-                <option value="USD">USD</option>
-                <option value="CNY">CNY</option>
-                <option value="EUR">EUR</option>
-              </select>
-            </div>
-          </div>
-
           <div class="form-group">
-            <label for="supplierNotes">Notes</label>
-            <textarea class="form-control" id="supplierNotes" placeholder="Additional notes about this supplier..."></textarea>
+            <label class="form-label">Contact Name</label>
+            <input type="text" id="f-contact" class="form-input" placeholder="John Lee">
           </div>
-        </form>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="f-email" class="form-input" placeholder="supplier@email.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone / WhatsApp</label>
+            <input type="text" id="f-phone" class="form-input" placeholder="+86 138 0000 0000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Country</label>
+            <select id="f-country" class="form-select">
+              <option value="China">🇨🇳 China</option>
+              <option value="India">🇮🇳 India</option>
+              <option value="Vietnam">🇻🇳 Vietnam</option>
+              <option value="Bangladesh">🇧🇩 Bangladesh</option>
+              <option value="Turkey">🇹🇷 Turkey</option>
+              <option value="Pakistan">🇵🇰 Pakistan</option>
+              <option value="Mexico">🇲🇽 Mexico</option>
+              <option value="Thailand">🇹🇭 Thailand</option>
+              <option value="Indonesia">🇮🇩 Indonesia</option>
+              <option value="Other">🌐 Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" id="f-city" class="form-input" placeholder="Shenzhen">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select id="f-category" class="form-select">
+              <option value="">Select category</option>
+              <option>Electronics</option>
+              <option>Apparel & Fashion</option>
+              <option>Home & Garden</option>
+              <option>Sports & Outdoors</option>
+              <option>Health & Beauty</option>
+              <option>Toys & Games</option>
+              <option>Pet Supplies</option>
+              <option>Auto & Industrial</option>
+              <option>Food & Grocery</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payment Terms</label>
+            <select id="f-payment" class="form-select">
+              <option value="Net 30">Net 30</option>
+              <option value="Net 60">Net 60</option>
+              <option value="Net 90">Net 90</option>
+              <option value="Prepaid">Prepaid (100% upfront)</option>
+              <option value="50/50">50% deposit / 50% on shipment</option>
+              <option value="30/70">30% deposit / 70% on shipment</option>
+              <option value="LC">Letter of Credit</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Lead Time (days)</label>
+            <input type="number" id="f-lead" class="form-input" placeholder="30" value="30">
+          </div>
+          <div class="form-group">
+            <label class="form-label">MOQ (units)</label>
+            <input type="number" id="f-moq" class="form-input" placeholder="100" value="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Currency</label>
+            <select id="f-currency" class="form-select">
+              <option value="USD">USD</option>
+              <option value="CNY">CNY (RMB)</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Website</label>
+            <input type="text" id="f-website" class="form-input" placeholder="https://supplier.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select id="f-status" class="form-select">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="on_hold">On Hold</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="f-notes" class="form-textarea" placeholder="Payment history, quality notes, contacts..."></textarea>
+        </div>
+        <div class="form-error" id="modal-error"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
-        <button class="btn btn-primary" id="modalSaveBtn">Save Supplier</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSupplier()" id="save-btn">Save Supplier</button>
       </div>
     </div>
   </div>
 
-  <!-- Delete Confirmation Modal -->
-  <div class="modal-overlay" id="deleteModal">
-    <div class="modal" style="max-width:420px">
+  <!-- MODAL DELETE CONFIRM -->
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal" style="max-width:400px">
       <div class="modal-header">
-        <h3>Delete Supplier</h3>
-        <button class="modal-close" id="deleteModalCloseBtn">&times;</button>
+        <span class="modal-title">Delete Supplier</span>
+        <button class="modal-close" onclick="closeDeleteModal()">×</button>
       </div>
       <div class="modal-body">
-        <p style="color:var(--text-muted);font-size:.9rem;">Are you sure you want to delete <strong id="deleteSupplierName" style="color:var(--text)"></strong>? This action cannot be undone.</p>
+        <p style="color:var(--text-muted)">Are you sure you want to delete <strong id="delete-name"></strong>? This action cannot be undone.</p>
+        <p style="color:var(--red);font-size:13px;margin-top:8px">⚠️ This will also delete all associated purchase orders and shipments.</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="deleteCancelBtn">Cancel</button>
-        <button class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()" id="confirm-delete-btn">Delete</button>
       </div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script src="/js/layout.js"></script>
   <script>
-    let allSuppliers = [];
-    let currentUser = null;
-    let editingSupplierId = null;
-    let deletingSupplierId = null;
+    let suppliers = []
+    let deleteId = null
+    const COLORS = ['#00d4aa','#3b82f6','#8b5cf6','#f59e0b','#ef4444','#ec4899']
 
-    // ---- INITIALIZATION ----
-    async function init() {
-      currentUser = await requireAuth();
-      if (!currentUser) return;
+    async function load() {
+      const user = await window.requireAuth()
+      await window.initLayout({ page: 'suppliers', title: 'Suppliers' })
+      const { data, error } = await window._sb.from('suppliers').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+      if (error) { window.showToast('Error loading suppliers', 'error'); return }
+      suppliers = data || []
+      updateStats()
+      renderTable()
+    }
 
-      renderLayout('suppliers');
-      document.getElementById('mainContent').style.display = 'block';
+    function updateStats() {
+      const active = suppliers.filter(s => s.status === 'active').length
+      const avgScore = suppliers.length ? Math.round(suppliers.reduce((a,s) => a+(s.score||100), 0)/suppliers.length) : 0
+      const totalSpent = suppliers.reduce((a,s) => a+(s.total_spent||0), 0)
+      document.getElementById('stat-total').textContent = suppliers.length
+      document.getElementById('stat-total-sub').textContent = `${suppliers.length} registered`
+      document.getElementById('stat-active').textContent = active
+      document.getElementById('stat-score').textContent = avgScore
+      document.getElementById('stat-spent').textContent = window.formatCurrency(totalSpent)
+    }
 
-      bindEvents();
-      await loadSuppliers();
-
-      // Auto-open modal if ?action=add or ?action=edit&id=...
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('action') === 'add') {
-        openAddModal();
-      } else if (params.get('action') === 'edit' && params.get('id')) {
-        openEditModal(params.get('id'));
+    function renderTable() {
+      const q = document.getElementById('search').value.toLowerCase()
+      const status = document.getElementById('filter-status').value
+      const country = document.getElementById('filter-country').value
+      let list = suppliers.filter(s => {
+        if (q && !s.company_name.toLowerCase().includes(q) && !(s.contact_name||'').toLowerCase().includes(q)) return false
+        if (status && s.status !== status) return false
+        if (country && s.country !== country) return false
+        return true
+      })
+      if (!list.length) {
+        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No suppliers found</h3><p>Try adjusting your filters</p></div>`
+        return
       }
+      document.getElementById('table-body').innerHTML = `
+        <table>
+          <thead><tr>
+            <th>Supplier</th><th>Country</th><th>Category</th><th>Lead Time</th><th>On-Time Rate</th><th>Score</th><th>Orders</th><th>Status</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${list.map((s,i) => {
+              const initials = s.company_name.substring(0,2).toUpperCase()
+              const color = COLORS[i % COLORS.length]
+              const score = s.score || 100
+              const scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--orange)' : 'var(--red)'
+              const onTime = s.on_time_rate || 100
+              const onTimeColor = onTime >= 90 ? 'var(--green)' : onTime >= 70 ? 'var(--orange)' : 'var(--red)'
+              const flag = window.getCountryFlag(s.country === 'China' ? 'CN' : s.country === 'India' ? 'IN' : s.country === 'Vietnam' ? 'VN' : '')
+              return `<tr onclick="window.location.href='/suppliers-detail.html?id=${s.id}'">
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div class="supplier-avatar" style="background:${color}22;color:${color};border:1px solid ${color}44">${initials}</div>
+                    <div>
+                      <div style="font-weight:600">${window.escapeHtml(s.company_name)}</div>
+                      <div style="font-size:12px;color:var(--text-muted)">${window.escapeHtml(s.contact_name||'')}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>${flag} ${window.escapeHtml(s.country||'')}</td>
+                <td>${window.escapeHtml(s.category||'—')}</td>
+                <td>${s.lead_time_days||30}d</td>
+                <td style="min-width:100px">
+                  <div style="font-size:13px;font-weight:600;color:${onTimeColor}">${onTime}%</div>
+                  <div class="rate-bar"><div class="rate-fill" style="width:${onTime}%;background:${onTimeColor}"></div></div>
+                </td>
+                <td><span class="score-badge" style="background:${scoreColor}22;color:${scoreColor}">${score}</span></td>
+                <td>${s.total_orders||0}</td>
+                <td>${window.getStatusBadge(s.status||'active')}</td>
+                <td onclick="event.stopPropagation()">
+                  <div class="action-btns">
+                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editSupplier('${s.id}')" title="Edit">✏️</button>
+                    <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${s.id}','${window.escapeHtml(s.company_name)}')" title="Delete">🗑️</button>
+                  </div>
+                </td>
+              </tr>`
+            }).join('')}
+          </tbody>
+        </table>`
     }
 
-    // ---- EVENT BINDING ----
-    function bindEvents() {
-      // Add supplier button
-      document.getElementById('addSupplierBtn').addEventListener('click', openAddModal);
-
-      // Modal close/cancel
-      document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-      document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
-      document.getElementById('supplierModal').addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
-      });
-
-      // Modal save
-      document.getElementById('modalSaveBtn').addEventListener('click', saveSupplier);
-
-      // Delete modal close/cancel
-      document.getElementById('deleteModalCloseBtn').addEventListener('click', closeDeleteModal);
-      document.getElementById('deleteCancelBtn').addEventListener('click', closeDeleteModal);
-      document.getElementById('deleteModal').addEventListener('click', function(e) {
-        if (e.target === this) closeDeleteModal();
-      });
-
-      // Delete confirm
-      document.getElementById('deleteConfirmBtn').addEventListener('click', confirmDelete);
-
-      // Filters
-      document.getElementById('searchInput').addEventListener('input', applyFilters);
-      document.getElementById('statusFilter').addEventListener('change', applyFilters);
-      document.getElementById('countryFilter').addEventListener('change', applyFilters);
-
-      // Keyboard shortcut to close modals
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-          closeModal();
-          closeDeleteModal();
-        }
-      });
+    function openModal(id) {
+      clearForm()
+      document.getElementById('modal-title').textContent = 'Add Supplier'
+      document.getElementById('modal').classList.add('active')
     }
 
-    // ---- LOAD SUPPLIERS ----
-    async function loadSuppliers() {
-      document.getElementById('suppliersTableWrap').innerHTML = '<div class="loading"><div class="spinner"></div>Loading suppliers...</div>';
+    function closeModal() { document.getElementById('modal').classList.remove('active') }
 
-      const { data, error } = await window._supabase
-        .from('suppliers')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        showToast('Failed to load suppliers: ' + error.message, 'error');
-        document.getElementById('suppliersTableWrap').innerHTML = '<div class="empty-state"><p>Error loading suppliers</p><small>Please try refreshing the page</small></div>';
-        return;
-      }
-
-      allSuppliers = data || [];
-      applyFilters();
+    function clearForm() {
+      ['f-company','f-contact','f-email','f-phone','f-city','f-website','f-notes'].forEach(id => document.getElementById(id).value = '')
+      document.getElementById('edit-id').value = ''
+      document.getElementById('f-lead').value = 30
+      document.getElementById('f-moq').value = 1
+      document.getElementById('f-country').value = 'China'
+      document.getElementById('f-payment').value = 'Net 30'
+      document.getElementById('f-currency').value = 'USD'
+      document.getElementById('f-status').value = 'active'
+      document.getElementById('modal-error').textContent = ''
     }
 
-    // ---- RENDER TABLE ----
-    function renderTable(suppliers) {
-      const wrap = document.getElementById('suppliersTableWrap');
-
-      if (suppliers.length === 0) {
-        const hasFilters = document.getElementById('searchInput').value ||
-                           document.getElementById('statusFilter').value ||
-                           document.getElementById('countryFilter').value;
-        if (hasFilters) {
-          wrap.innerHTML = '<div class="empty-state"><p>No suppliers match your filters</p><small>Try adjusting your search or filter criteria</small></div>';
-        } else {
-          wrap.innerHTML = '<div class="empty-state"><p>No suppliers yet</p><small>Click "Add Supplier" to get started</small></div>';
-        }
-        return;
-      }
-
-      let html = `<table>
-        <thead>
-          <tr>
-            <th>Supplier Name</th>
-            <th>Country</th>
-            <th>Category</th>
-            <th>Lead Time</th>
-            <th>On-Time Rate</th>
-            <th>Score</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>`;
-
-      suppliers.forEach(function(s) {
-        const initials = getInitials(s.company_name || '');
-        const avatarColor = nameToHslColor(s.company_name || '');
-        const country = escapeHtml(s.country || '');
-        const flag = countryFlag(s.country || '');
-        const category = escapeHtml(s.category || '—');
-        const leadTime = s.lead_time_days != null ? s.lead_time_days + ' days' : '—';
-        const onTimeRate = s.on_time_rate != null ? s.on_time_rate : null;
-        const score = s.score != null ? s.score : null;
-        const status = s.status || 'active';
-
-        // On-time rate rendering
-        let onTimeHtml = '—';
-        if (onTimeRate !== null) {
-          let barColor;
-          if (onTimeRate > 90) barColor = 'var(--primary)';
-          else if (onTimeRate >= 70) barColor = 'var(--warning)';
-          else barColor = 'var(--danger)';
-          onTimeHtml = '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + onTimeRate + '%;background:' + barColor + '"></div></div>' + onTimeRate + '%';
-        }
-
-        // Score badge rendering
-        let scoreHtml = '—';
-        if (score !== null) {
-          let scoreBg, scoreColor;
-          if (score >= 80) {
-            scoreBg = 'rgba(0,212,170,.15)';
-            scoreColor = 'var(--primary)';
-          } else if (score >= 60) {
-            scoreBg = 'rgba(245,158,11,.15)';
-            scoreColor = 'var(--warning)';
-          } else {
-            scoreBg = 'rgba(255,71,87,.15)';
-            scoreColor = 'var(--danger)';
-          }
-          scoreHtml = '<span class="score-badge" style="background:' + scoreBg + ';color:' + scoreColor + '">' + score + '</span>';
-        }
-
-        html += '<tr>' +
-          '<td><div class="supplier-cell"><div class="supplier-avatar" style="background:' + avatarColor + ';color:#fff">' + escapeHtml(initials) + '</div><span class="cell-primary">' + escapeHtml(s.company_name || '') + '</span></div></td>' +
-          '<td>' + flag + ' ' + country + '</td>' +
-          '<td>' + category + '</td>' +
-          '<td>' + leadTime + '</td>' +
-          '<td>' + onTimeHtml + '</td>' +
-          '<td>' + scoreHtml + '</td>' +
-          '<td>' + statusBadge(status) + '</td>' +
-          '<td>' +
-            '<button class="btn-icon" onclick="viewSupplier(\'' + s.id + '\')" title="View Details">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
-            '</button>' +
-            '<button class="btn-icon" onclick="openEditModal(\'' + s.id + '\')" title="Edit">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
-            '</button>' +
-            '<button class="btn-icon danger" onclick="openDeleteModal(\'' + s.id + '\', \'' + escapeHtml((s.company_name || '').replace(/'/g, "\\'")) + '\')" title="Delete">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>' +
-            '</button>' +
-          '</td>' +
-        '</tr>';
-      });
-
-      html += '</tbody></table>';
-      wrap.innerHTML = html;
+    function editSupplier(id) {
+      const s = suppliers.find(x => x.id === id)
+      if (!s) return
+      clearForm()
+      document.getElementById('modal-title').textContent = 'Edit Supplier'
+      document.getElementById('edit-id').value = id
+      document.getElementById('f-company').value = s.company_name || ''
+      document.getElementById('f-contact').value = s.contact_name || ''
+      document.getElementById('f-email').value = s.email || ''
+      document.getElementById('f-phone').value = s.phone || ''
+      document.getElementById('f-city').value = s.city || ''
+      document.getElementById('f-website').value = s.website || ''
+      document.getElementById('f-notes').value = s.notes || ''
+      document.getElementById('f-lead').value = s.lead_time_days || 30
+      document.getElementById('f-moq').value = s.moq || 1
+      document.getElementById('f-country').value = s.country || 'China'
+      document.getElementById('f-category').value = s.category || ''
+      document.getElementById('f-payment').value = s.payment_terms || 'Net 30'
+      document.getElementById('f-currency').value = s.currency || 'USD'
+      document.getElementById('f-status').value = s.status || 'active'
+      document.getElementById('modal').classList.add('active')
     }
 
-    // ---- FILTERING ----
-    function applyFilters() {
-      const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-      const statusVal = document.getElementById('statusFilter').value.toLowerCase();
-      const countryVal = document.getElementById('countryFilter').value;
-
-      let filtered = allSuppliers.filter(function(s) {
-        // Search filter
-        if (searchTerm) {
-          const haystack = [
-            s.company_name || '',
-            s.contact_name || '',
-            s.email || '',
-            s.country || '',
-            s.category || '',
-            s.city || ''
-          ].join(' ').toLowerCase();
-          if (haystack.indexOf(searchTerm) === -1) return false;
-        }
-
-        // Status filter
-        if (statusVal) {
-          if ((s.status || 'active').toLowerCase() !== statusVal) return false;
-        }
-
-        // Country filter
-        if (countryVal) {
-          if (countryVal === 'Other') {
-            const mainCountries = ['China', 'India', 'Vietnam', 'Bangladesh', 'Turkey'];
-            if (mainCountries.indexOf(s.country) !== -1) return false;
-          } else {
-            if (s.country !== countryVal) return false;
-          }
-        }
-
-        return true;
-      });
-
-      renderTable(filtered);
-    }
-
-    // ---- MODAL OPEN/CLOSE ----
-    function openAddModal() {
-      editingSupplierId = null;
-      document.getElementById('modalTitle').textContent = 'Add Supplier';
-      document.getElementById('modalSaveBtn').textContent = 'Save Supplier';
-      resetForm();
-      document.getElementById('supplierModal').classList.add('show');
-    }
-
-    function openEditModal(id) {
-      const supplier = allSuppliers.find(function(s) { return s.id === id; });
-      if (!supplier) return;
-
-      editingSupplierId = id;
-      document.getElementById('modalTitle').textContent = 'Edit Supplier';
-      document.getElementById('modalSaveBtn').textContent = 'Update Supplier';
-
-      document.getElementById('supplierId').value = id;
-      document.getElementById('companyName').value = supplier.company_name || '';
-      document.getElementById('contactName').value = supplier.contact_name || '';
-      document.getElementById('contactEmail').value = supplier.email || '';
-      document.getElementById('contactPhone').value = supplier.phone || '';
-      document.getElementById('supplierCountry').value = supplier.country || '';
-      document.getElementById('supplierCity').value = supplier.city || '';
-      document.getElementById('supplierCategory').value = supplier.category || '';
-      document.getElementById('paymentTerms').value = supplier.payment_terms || '';
-      document.getElementById('leadTime').value = supplier.lead_time_days != null ? supplier.lead_time_days : '';
-      document.getElementById('moq').value = supplier.moq != null ? supplier.moq : '';
-      document.getElementById('supplierCurrency').value = supplier.currency || 'USD';
-      document.getElementById('supplierNotes').value = supplier.notes || '';
-
-      document.getElementById('supplierModal').classList.add('show');
-    }
-
-    function closeModal() {
-      document.getElementById('supplierModal').classList.remove('show');
-      editingSupplierId = null;
-      resetForm();
-    }
-
-    function resetForm() {
-      document.getElementById('supplierForm').reset();
-      document.getElementById('supplierId').value = '';
-      document.getElementById('supplierCurrency').value = 'USD';
-    }
-
-    // ---- SAVE (CREATE/UPDATE) ----
     async function saveSupplier() {
-      var companyName = document.getElementById('companyName').value.trim();
-      if (!companyName) {
-        showToast('Company name is required', 'error');
-        document.getElementById('companyName').focus();
-        return;
+      const company = document.getElementById('f-company').value.trim()
+      if (!company) { document.getElementById('modal-error').textContent = 'Company name is required.'; return }
+      const btn = document.getElementById('save-btn')
+      btn.textContent = 'Saving...'
+      btn.disabled = true
+      const user = await window.getUser()
+      const data = {
+        user_id: user.id,
+        company_name: company,
+        contact_name: document.getElementById('f-contact').value.trim(),
+        email: document.getElementById('f-email').value.trim(),
+        phone: document.getElementById('f-phone').value.trim(),
+        city: document.getElementById('f-city').value.trim(),
+        website: document.getElementById('f-website').value.trim(),
+        notes: document.getElementById('f-notes').value.trim(),
+        lead_time_days: parseInt(document.getElementById('f-lead').value)||30,
+        moq: parseInt(document.getElementById('f-moq').value)||1,
+        country: document.getElementById('f-country').value,
+        category: document.getElementById('f-category').value,
+        payment_terms: document.getElementById('f-payment').value,
+        currency: document.getElementById('f-currency').value,
+        status: document.getElementById('f-status').value,
       }
-
-      var saveBtn = document.getElementById('modalSaveBtn');
-      var originalText = saveBtn.textContent;
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
-
-      var supplierData = {
-        company_name: companyName,
-        contact_name: document.getElementById('contactName').value.trim() || null,
-        email: document.getElementById('contactEmail').value.trim() || null,
-        phone: document.getElementById('contactPhone').value.trim() || null,
-        country: document.getElementById('supplierCountry').value || null,
-        city: document.getElementById('supplierCity').value.trim() || null,
-        category: document.getElementById('supplierCategory').value || null,
-        payment_terms: document.getElementById('paymentTerms').value || null,
-        lead_time_days: document.getElementById('leadTime').value ? parseInt(document.getElementById('leadTime').value) : null,
-        moq: document.getElementById('moq').value ? parseInt(document.getElementById('moq').value) : null,
-        currency: document.getElementById('supplierCurrency').value || 'USD',
-        notes: document.getElementById('supplierNotes').value.trim() || null,
-        user_id: currentUser.id
-      };
-
-      var result;
-      if (editingSupplierId) {
-        // Update
-        result = await window._supabase
-          .from('suppliers')
-          .update(supplierData)
-          .eq('id', editingSupplierId)
-          .eq('user_id', currentUser.id)
-          .select();
+      const editId = document.getElementById('edit-id').value
+      let error
+      if (editId) {
+        ({ error } = await window._sb.from('suppliers').update(data).eq('id', editId))
       } else {
-        // Create
-        supplierData.status = 'active';
-        result = await window._supabase
-          .from('suppliers')
-          .insert(supplierData)
-          .select();
+        ({ error } = await window._sb.from('suppliers').insert(data))
       }
-
-      saveBtn.disabled = false;
-      saveBtn.textContent = originalText;
-
-      if (result.error) {
-        showToast('Error: ' + result.error.message, 'error');
-        return;
-      }
-
-      showToast(editingSupplierId ? 'Supplier updated successfully' : 'Supplier added successfully', 'success');
-      closeModal();
-      await loadSuppliers();
+      btn.textContent = 'Save Supplier'
+      btn.disabled = false
+      if (error) { document.getElementById('modal-error').textContent = error.message; return }
+      window.showToast(editId ? 'Supplier updated!' : 'Supplier added!', 'success')
+      closeModal()
+      await load()
     }
 
-    // ---- DELETE ----
-    function openDeleteModal(id, name) {
-      deletingSupplierId = id;
-      document.getElementById('deleteSupplierName').textContent = name;
-      document.getElementById('deleteModal').classList.add('show');
+    function askDelete(id, name) {
+      deleteId = id
+      document.getElementById('delete-name').textContent = name
+      document.getElementById('delete-modal').classList.add('active')
     }
 
-    function closeDeleteModal() {
-      document.getElementById('deleteModal').classList.remove('show');
-      deletingSupplierId = null;
-    }
+    function closeDeleteModal() { document.getElementById('delete-modal').classList.remove('active'); deleteId = null }
 
     async function confirmDelete() {
-      if (!deletingSupplierId) return;
-
-      var confirmBtn = document.getElementById('deleteConfirmBtn');
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = 'Deleting...';
-
-      var { error } = await window._supabase
-        .from('suppliers')
-        .delete()
-        .eq('id', deletingSupplierId)
-        .eq('user_id', currentUser.id);
-
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Delete';
-
-      if (error) {
-        showToast('Error deleting supplier: ' + error.message, 'error');
-        return;
-      }
-
-      showToast('Supplier deleted', 'success');
-      closeDeleteModal();
-      await loadSuppliers();
+      if (!deleteId) return
+      const btn = document.getElementById('confirm-delete-btn')
+      btn.textContent = 'Deleting...'
+      btn.disabled = true
+      const { error } = await window._sb.from('suppliers').delete().eq('id', deleteId)
+      btn.textContent = 'Delete'
+      btn.disabled = false
+      if (error) { window.showToast('Error: ' + error.message, 'error'); return }
+      window.showToast('Supplier deleted.', 'success')
+      closeDeleteModal()
+      await load()
     }
 
-    // ---- VIEW SUPPLIER ----
-    function viewSupplier(id) {
-      window.location.href = '/suppliers-detail.html?id=' + id;
-    }
-
-    // ---- HELPERS ----
-    function getInitials(name) {
-      if (!name) return '?';
-      var parts = name.trim().split(/\s+/);
-      if (parts.length >= 2) {
-        return (parts[0][0] + parts[1][0]).toUpperCase();
-      }
-      return name.substring(0, 2).toUpperCase();
-    }
-
-    function nameToHslColor(name) {
-      var hash = 0;
-      for (var i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      var h = Math.abs(hash) % 360;
-      return 'hsl(' + h + ', 55%, 45%)';
-    }
-
-    // ---- START ----
-    init();
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDeleteModal() } })
+    load()
   </script>
 </body>
 </html>

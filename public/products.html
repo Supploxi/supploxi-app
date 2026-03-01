@@ -4,696 +4,403 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Supploxi — Products</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="/js/supabase-client.js"></script>
-  <script src="/js/layout.js"></script>
   <style>
-    .product-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: .8rem;
-      flex-shrink: 0;
-      color: #fff;
-    }
-    .product-cell {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .margin-green { color: #00d4aa; font-weight: 600; }
-    .margin-yellow { color: #f59e0b; font-weight: 600; }
-    .margin-red { color: #ff4757; font-weight: 600; }
-    .stock-warning {
-      display: inline-block;
-      padding: 2px 7px;
-      border-radius: 10px;
-      font-size: .65rem;
-      font-weight: 600;
-      background: rgba(245,158,11,.15);
-      color: #f59e0b;
-      border: 1px solid rgba(245,158,11,.3);
-      margin-left: 6px;
-      text-transform: uppercase;
-      letter-spacing: .03em;
-    }
-    .stock-out {
-      background: rgba(255,71,87,.15);
-      color: #ff4757;
-      border-color: rgba(255,71,87,.3);
-    }
-    .actions-cell {
-      display: flex;
-      gap: 4px;
-    }
-    .form-section-title {
-      font-size: .8rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      margin: 20px 0 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    .form-section-title:first-child { margin-top: 0; }
+    .computed-field { background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:14px; font-weight:600; }
+    .action-btns { display:flex; gap:6px; opacity:0; transition:opacity 0.15s; }
+    tr:hover .action-btns { opacity:1; }
   </style>
 </head>
 <body>
-  <div class="loading" id="loadingScreen">
-    <div class="spinner"></div> Loading...
-  </div>
+  <div class="main-content">
+    <div class="page-content">
 
-  <div class="main" id="mainContent" style="display:none">
-    <!-- Stats -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Total Products</div>
-        <div class="stat-value" id="statTotal">0</div>
-        <div class="stat-sub" id="statTotalSub">No products yet</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total Products</div><div class="stat-value" id="stat-total">—</div><div class="stat-sub">Active SKUs</div></div>
+        <div class="stat-card"><div class="stat-label">Low Stock</div><div class="stat-value" id="stat-low">—</div><div class="stat-sub" id="stat-low-sub">Need attention</div></div>
+        <div class="stat-card"><div class="stat-label">Out of Stock</div><div class="stat-value" id="stat-out">—</div><div class="stat-sub red">Urgent</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Margin</div><div class="stat-value" id="stat-margin">—</div><div class="stat-sub">Gross margin</div></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Low Stock</div>
-        <div class="stat-value" id="statLow">0</div>
-        <div class="stat-sub down" id="statLowSub">Items at or below reorder point</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Out of Stock</div>
-        <div class="stat-value" id="statOut">0</div>
-        <div class="stat-sub down" id="statOutSub">Items with zero stock</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Avg Margin</div>
-        <div class="stat-value" id="statMargin">0%</div>
-        <div class="stat-sub" id="statMarginSub">Average product margin</div>
-      </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="filters-bar">
-      <input type="text" class="search-input" id="searchInput" placeholder="Search products...">
-      <select class="filter-select" id="filterCategory">
-        <option value="">All Categories</option>
-        <option value="Electronics">Electronics</option>
-        <option value="Apparel">Apparel</option>
-        <option value="Home & Garden">Home & Garden</option>
-        <option value="Sports">Sports</option>
-        <option value="Beauty">Beauty</option>
-        <option value="Other">Other</option>
-      </select>
-      <select class="filter-select" id="filterSupplier">
-        <option value="">All Suppliers</option>
-      </select>
-      <select class="filter-select" id="filterStock">
-        <option value="">All Stock Status</option>
-        <option value="in_stock">In Stock</option>
-        <option value="low_stock">Low Stock</option>
-        <option value="out_of_stock">Out of Stock</option>
-      </select>
-    </div>
-
-    <!-- Products Table -->
-    <div class="section">
-      <div class="section-header">
-        <h3>Products Catalog</h3>
-        <button class="btn btn-primary" id="addProductBtn">+ Add Product</button>
-      </div>
-      <div id="productsTableWrap">
-        <div class="loading"><div class="spinner"></div> Loading products...</div>
+      <div class="table-container">
+        <div class="table-header">
+          <div class="search-wrapper" style="flex:1">
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" class="search-input" id="search" placeholder="Search products or SKU..." oninput="renderTable()">
+          </div>
+          <select class="form-select" style="width:140px" id="filter-cat" onchange="renderTable()">
+            <option value="">All Categories</option>
+            <option>Electronics</option>
+            <option>Apparel & Fashion</option>
+            <option>Home & Garden</option>
+            <option>Sports & Outdoors</option>
+            <option>Health & Beauty</option>
+            <option>Toys & Games</option>
+          </select>
+          <select class="form-select" style="width:140px" id="filter-stock" onchange="renderTable()">
+            <option value="">All Stock</option>
+            <option value="ok">In Stock</option>
+            <option value="low">Low Stock</option>
+            <option value="out">Out of Stock</option>
+          </select>
+          <button class="btn btn-primary" onclick="openModal()">+ Add Product</button>
+        </div>
+        <div id="table-body">
+          <div class="empty-state"><div class="empty-state-icon">📦</div><h3>No products yet</h3><p>Add your first product to start tracking inventory and margins</p><button class="btn btn-primary" onclick="openModal()">+ Add Product</button></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Add/Edit Product Modal -->
-  <div class="modal-overlay" id="productModal">
-    <div class="modal" style="max-width: 640px;">
+  <!-- MODAL ADD/EDIT -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal" style="max-width:680px">
       <div class="modal-header">
-        <h3 id="modalTitle">Add Product</h3>
-        <button class="modal-close" id="modalCloseBtn">&times;</button>
+        <span class="modal-title" id="modal-title">Add Product</span>
+        <button class="modal-close" onclick="closeModal()">×</button>
       </div>
       <div class="modal-body">
-        <form id="productForm">
-          <input type="hidden" id="productId">
-
-          <div class="form-section-title" style="margin-top: 0;">Basic Information</div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productName">Product Name *</label>
-              <input type="text" class="form-control" id="productName" required placeholder="Enter product name">
-            </div>
-            <div class="form-group">
-              <label for="productSku">SKU</label>
-              <input type="text" class="form-control" id="productSku" placeholder="e.g. SKU-001">
-            </div>
+        <input type="hidden" id="edit-id">
+        <div class="form-grid">
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Product Name <span class="required">*</span></label>
+            <input type="text" id="f-name" class="form-input" placeholder="Premium Yoga Mat">
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productCategory">Category</label>
-              <select class="form-control" id="productCategory">
-                <option value="">Select category</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Apparel">Apparel</option>
-                <option value="Home & Garden">Home & Garden</option>
-                <option value="Sports">Sports</option>
-                <option value="Beauty">Beauty</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="productSupplier">Primary Supplier</label>
-              <select class="form-control" id="productSupplier">
-                <option value="">Select supplier</option>
-              </select>
-            </div>
-          </div>
-
           <div class="form-group">
-            <label for="productDescription">Description</label>
-            <textarea class="form-control" id="productDescription" rows="3" placeholder="Product description..."></textarea>
+            <label class="form-label">SKU</label>
+            <input type="text" id="f-sku" class="form-input" placeholder="YM-001-BLK">
           </div>
-
-          <div class="form-section-title">Pricing</div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productSellingPrice">Selling Price USD</label>
-              <input type="number" class="form-control" id="productSellingPrice" step="0.01" min="0" placeholder="0.00">
-            </div>
-            <div class="form-group">
-              <label for="productCostPrice">Cost Price USD</label>
-              <input type="number" class="form-control" id="productCostPrice" step="0.01" min="0" placeholder="0.00">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productShipping">Additional Costs - Shipping Estimate</label>
-              <input type="number" class="form-control" id="productShipping" step="0.01" min="0" value="0" placeholder="0.00">
-            </div>
-            <div class="form-group">
-              <label for="productDuties">Additional Costs - Duties Estimate</label>
-              <input type="number" class="form-control" id="productDuties" step="0.01" min="0" value="0" placeholder="0.00">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Landed Cost</label>
-              <div class="form-computed" id="computedLandedCost">$0.00</div>
-            </div>
-            <div class="form-group">
-              <label>Margin %</label>
-              <div class="form-computed" id="computedMargin">0.0%</div>
-            </div>
-          </div>
-
-          <div class="form-section-title">Inventory</div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productStock">Stock Quantity</label>
-              <input type="number" class="form-control" id="productStock" min="0" value="0" placeholder="0">
-            </div>
-            <div class="form-group">
-              <label for="productReorderPoint">Reorder Point</label>
-              <input type="number" class="form-control" id="productReorderPoint" min="0" value="10" placeholder="10">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productReorderQty">Reorder Quantity</label>
-              <input type="number" class="form-control" id="productReorderQty" min="0" value="50" placeholder="50">
-            </div>
-            <div class="form-group">
-              <label for="productAvgDailySales">Avg Daily Sales</label>
-              <input type="number" class="form-control" id="productAvgDailySales" min="0" step="0.1" value="1" placeholder="1">
-            </div>
-          </div>
-
           <div class="form-group">
-            <label for="productNotes">Notes</label>
-            <textarea class="form-control" id="productNotes" rows="3" placeholder="Additional notes..."></textarea>
+            <label class="form-label">Barcode</label>
+            <input type="text" id="f-barcode" class="form-input" placeholder="012345678901">
           </div>
-        </form>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select id="f-category" class="form-select">
+              <option value="">Select category</option>
+              <option>Electronics</option>
+              <option>Apparel & Fashion</option>
+              <option>Home & Garden</option>
+              <option>Sports & Outdoors</option>
+              <option>Health & Beauty</option>
+              <option>Toys & Games</option>
+              <option>Pet Supplies</option>
+              <option>Auto & Industrial</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Primary Supplier</label>
+            <select id="f-supplier" class="form-select">
+              <option value="">No supplier</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">HTS Code (for tariff tracking)</label>
+            <input type="text" id="f-hts" class="form-input" placeholder="e.g. 9506.91.0030">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Weight (kg)</label>
+            <input type="number" id="f-weight" class="form-input" placeholder="0.5" step="0.01">
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px">💰 Pricing & Margins</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Selling Price (USD) <span class="required">*</span></label>
+              <input type="number" id="f-sell" class="form-input" placeholder="29.99" step="0.01" oninput="calcLive()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cost Price from Supplier (USD)</label>
+              <input type="number" id="f-cost" class="form-input" placeholder="8.50" step="0.01" oninput="calcLive()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Est. Shipping Cost (USD)</label>
+              <input type="number" id="f-shipping" class="form-input" placeholder="1.50" step="0.01" oninput="calcLive()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Est. Customs/Duties (USD)</label>
+              <input type="number" id="f-duties" class="form-input" placeholder="0.80" step="0.01" oninput="calcLive()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Landed Cost (calculated)</label>
+              <div class="computed-field" id="c-landed" style="color:var(--orange)">$0.00</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gross Margin (calculated)</label>
+              <div class="computed-field" id="c-margin">0.0%</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px">📦 Inventory & Reorder</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Current Stock (units)</label>
+              <input type="number" id="f-stock" class="form-input" placeholder="0" value="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reorder Point (units)</label>
+              <input type="number" id="f-reorder" class="form-input" placeholder="10" value="10">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reorder Quantity (units)</label>
+              <input type="number" id="f-reorder-qty" class="form-input" placeholder="50" value="50">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Avg Daily Sales (units)</label>
+              <input type="number" id="f-daily" class="form-input" placeholder="1" value="1" step="0.1">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="f-notes" class="form-textarea" placeholder="Product specs, variations, important notes..."></textarea>
+        </div>
+        <div class="form-error" id="modal-error"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
-        <button class="btn btn-primary" id="modalSaveBtn">Save Product</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProduct()" id="save-btn">Save Product</button>
       </div>
     </div>
   </div>
 
+  <!-- DELETE MODAL -->
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <span class="modal-title">Delete Product</span>
+        <button class="modal-close" onclick="closeDeleteModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-muted)">Are you sure you want to delete <strong id="delete-name"></strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script src="/js/layout.js"></script>
   <script>
-    let currentUser = null;
-    let allProducts = [];
-    let allSuppliers = [];
+    let products = []
+    let suppliers = []
+    let deleteId = null
 
-    // ---- INIT ----
-    async function init() {
-      currentUser = await requireAuth();
-      if (!currentUser) return;
-
-      renderLayout('products');
-      document.getElementById('loadingScreen').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'block';
-
-      await loadSuppliers();
-      await loadProducts();
-
-      setupEventListeners();
-
-      // Auto-open modal if ?action=add
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('action') === 'add') {
-        openModal();
-      }
+    async function load() {
+      const user = await window.requireAuth()
+      await window.initLayout({ page: 'products', title: 'Products' })
+      const [{ data: p }, { data: s }] = await Promise.all([
+        window._sb.from('products').select('*, suppliers(company_name)').eq('user_id', user.id).order('created_at', { ascending: false }),
+        window._sb.from('suppliers').select('id,company_name').eq('user_id', user.id).eq('status','active')
+      ])
+      products = p || []
+      suppliers = s || []
+      const sel = document.getElementById('f-supplier')
+      sel.innerHTML = '<option value="">No supplier</option>' + suppliers.map(s => `<option value="${s.id}">${window.escapeHtml(s.company_name)}</option>`).join('')
+      updateStats()
+      renderTable()
     }
 
-    // ---- LOAD SUPPLIERS (for dropdowns) ----
-    async function loadSuppliers() {
-      const { data, error } = await window._supabase
-        .from('suppliers')
-        .select('id, company_name')
-        .eq('user_id', currentUser.id)
-        .order('company_name', { ascending: true });
-
-      if (error) {
-        console.error('Error loading suppliers:', error);
-        return;
-      }
-
-      allSuppliers = data || [];
-
-      // Populate filter dropdown
-      const filterSelect = document.getElementById('filterSupplier');
-      allSuppliers.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id;
-        opt.textContent = s.company_name;
-        filterSelect.appendChild(opt);
-      });
-
-      // Populate modal dropdown
-      const modalSelect = document.getElementById('productSupplier');
-      allSuppliers.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id;
-        opt.textContent = s.company_name;
-        modalSelect.appendChild(opt);
-      });
-    }
-
-    // ---- LOAD PRODUCTS ----
-    async function loadProducts() {
-      const { data, error } = await window._supabase
-        .from('products')
-        .select('*, suppliers(company_name)')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading products:', error);
-        showToast('Failed to load products', 'error');
-        return;
-      }
-
-      allProducts = data || [];
-      updateStats();
-      renderTable();
-    }
-
-    // ---- UPDATE STATS ----
     function updateStats() {
-      const total = allProducts.length;
-      const lowStock = allProducts.filter(p => p.stock_quantity > 0 && p.stock_quantity <= (p.reorder_point || 0)).length;
-      const outOfStock = allProducts.filter(p => p.stock_quantity === 0).length;
-
-      const marginsArr = allProducts.filter(p => p.margin_percent != null).map(p => Number(p.margin_percent));
-      const avgMargin = marginsArr.length > 0 ? (marginsArr.reduce((a, b) => a + b, 0) / marginsArr.length) : 0;
-
-      document.getElementById('statTotal').textContent = total;
-      document.getElementById('statTotalSub').textContent = total === 0 ? 'No products yet' : total + ' product' + (total !== 1 ? 's' : '') + ' in catalog';
-
-      document.getElementById('statLow').textContent = lowStock;
-      document.getElementById('statLowSub').textContent = lowStock === 0 ? 'All stock levels healthy' : lowStock + ' item' + (lowStock !== 1 ? 's' : '') + ' need reorder';
-      document.getElementById('statLowSub').className = lowStock > 0 ? 'stat-sub down' : 'stat-sub up';
-
-      document.getElementById('statOut').textContent = outOfStock;
-      document.getElementById('statOutSub').textContent = outOfStock === 0 ? 'No items out of stock' : outOfStock + ' item' + (outOfStock !== 1 ? 's' : '') + ' unavailable';
-      document.getElementById('statOutSub').className = outOfStock > 0 ? 'stat-sub down' : 'stat-sub up';
-
-      document.getElementById('statMargin').textContent = avgMargin.toFixed(1) + '%';
-      document.getElementById('statMarginSub').className = avgMargin >= 30 ? 'stat-sub up' : avgMargin >= 15 ? 'stat-sub' : 'stat-sub down';
-      document.getElementById('statMarginSub').textContent = 'Average product margin';
+      const low = products.filter(p => (p.stock_quantity||0) > 0 && (p.stock_quantity||0) <= (p.reorder_point||10)).length
+      const out = products.filter(p => (p.stock_quantity||0) === 0).length
+      const avgMargin = products.length ? products.reduce((a,p) => a+(p.margin_percent||0), 0)/products.length : 0
+      document.getElementById('stat-total').textContent = products.length
+      document.getElementById('stat-low').textContent = low
+      document.getElementById('stat-out').textContent = out
+      document.getElementById('stat-margin').textContent = avgMargin.toFixed(1) + '%'
     }
 
-    // ---- FILTER PRODUCTS ----
-    function getFilteredProducts() {
-      const search = document.getElementById('searchInput').value.toLowerCase().trim();
-      const category = document.getElementById('filterCategory').value;
-      const supplier = document.getElementById('filterSupplier').value;
-      const stock = document.getElementById('filterStock').value;
-
-      return allProducts.filter(p => {
-        // Search filter
-        if (search) {
-          const name = (p.name || '').toLowerCase();
-          const sku = (p.sku || '').toLowerCase();
-          const desc = (p.description || '').toLowerCase();
-          if (!name.includes(search) && !sku.includes(search) && !desc.includes(search)) return false;
-        }
-
-        // Category filter
-        if (category && p.category !== category) return false;
-
-        // Supplier filter
-        if (supplier && p.primary_supplier_id !== supplier) return false;
-
-        // Stock status filter
-        if (stock === 'in_stock' && (p.stock_quantity <= (p.reorder_point || 0))) return false;
-        if (stock === 'low_stock' && !(p.stock_quantity > 0 && p.stock_quantity <= (p.reorder_point || 0))) return false;
-        if (stock === 'out_of_stock' && p.stock_quantity !== 0) return false;
-
-        return true;
-      });
-    }
-
-    // ---- RENDER TABLE ----
     function renderTable() {
-      const wrap = document.getElementById('productsTableWrap');
-      const filtered = getFilteredProducts();
-
-      if (filtered.length === 0) {
-        wrap.innerHTML = `
-          <div class="empty-state">
-            <p>${allProducts.length === 0 ? 'No products yet' : 'No products match your filters'}</p>
-            <small>${allProducts.length === 0 ? 'Click "Add Product" to get started' : 'Try adjusting your search or filter criteria'}</small>
-          </div>
-        `;
-        return;
+      const q = document.getElementById('search').value.toLowerCase()
+      const cat = document.getElementById('filter-cat').value
+      const stockFilter = document.getElementById('filter-stock').value
+      let list = products.filter(p => {
+        if (q && !p.name.toLowerCase().includes(q) && !(p.sku||'').toLowerCase().includes(q)) return false
+        if (cat && p.category !== cat) return false
+        if (stockFilter === 'out' && (p.stock_quantity||0) !== 0) return false
+        if (stockFilter === 'low' && !((p.stock_quantity||0) > 0 && (p.stock_quantity||0) <= (p.reorder_point||10))) return false
+        if (stockFilter === 'ok' && (p.stock_quantity||0) <= (p.reorder_point||10)) return false
+        return true
+      })
+      if (!list.length) {
+        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No products found</h3><p>Try adjusting your filters</p></div>`
+        return
       }
-
-      const iconColors = [
-        '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#00d4aa',
-        '#ef4444', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
-      ];
-
-      wrap.innerHTML = `
+      document.getElementById('table-body').innerHTML = `
         <table>
-          <thead>
-            <tr>
-              <th>Product Name</th>
-              <th>SKU</th>
-              <th>Category</th>
-              <th>Primary Supplier</th>
-              <th>Cost Price</th>
-              <th>Selling Price</th>
-              <th>Margin %</th>
-              <th>Stock Qty</th>
-              <th>Reorder Pt</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>Product</th><th>Supplier</th><th>Cost</th><th>Selling</th><th>Margin</th><th>Stock</th><th>AI Alert</th><th></th>
+          </tr></thead>
           <tbody>
-            ${filtered.map(p => {
-              const name = escapeHtml(p.name || 'Untitled');
-              const firstLetter = (p.name || 'U').charAt(0).toUpperCase();
-              const colorIdx = firstLetter.charCodeAt(0) % iconColors.length;
-              const iconColor = iconColors[colorIdx];
-
-              const supplierName = p.suppliers ? escapeHtml(p.suppliers.company_name) : '—';
-              const margin = p.margin_percent != null ? Number(p.margin_percent) : null;
-              let marginClass = 'margin-red';
-              if (margin !== null) {
-                if (margin > 40) marginClass = 'margin-green';
-                else if (margin >= 20) marginClass = 'margin-yellow';
-              }
-              const marginText = margin !== null ? margin.toFixed(1) + '%' : '—';
-
-              const stockQty = p.stock_quantity != null ? p.stock_quantity : 0;
-              const reorderPoint = p.reorder_point != null ? p.reorder_point : 0;
-              let stockBadge = '';
-              if (stockQty === 0) {
-                stockBadge = '<span class="stock-warning stock-out">Out</span>';
-              } else if (stockQty <= reorderPoint) {
-                stockBadge = '<span class="stock-warning">Low</span>';
-              }
-
-              return `
-                <tr>
-                  <td>
-                    <div class="product-cell">
-                      <div class="product-icon" style="background:${iconColor}20;color:${iconColor}">${firstLetter}</div>
-                      <span class="cell-primary">${name}</span>
-                    </div>
-                  </td>
-                  <td>${escapeHtml(p.sku || '—')}</td>
-                  <td>${escapeHtml(p.category || '—')}</td>
-                  <td>${supplierName}</td>
-                  <td>${formatCurrency(p.cost_price)}</td>
-                  <td>${formatCurrency(p.selling_price)}</td>
-                  <td><span class="${marginClass}">${marginText}</span></td>
-                  <td>${stockQty}${stockBadge}</td>
-                  <td>${reorderPoint}</td>
-                  <td>
-                    <div class="actions-cell">
-                      <button class="btn-icon" onclick="editProduct('${p.id}')" title="Edit">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                      <button class="btn-icon danger" onclick="deleteProduct('${p.id}')" title="Delete">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              `;
+            ${list.map(p => {
+              const stock = p.stock_quantity || 0
+              const rp = p.reorder_point || 10
+              const stockColor = stock === 0 ? 'var(--red)' : stock <= rp ? 'var(--orange)' : 'var(--green)'
+              const stockLabel = stock === 0 ? 'Out of Stock' : stock <= rp ? 'Low Stock' : 'In Stock'
+              const margin = p.margin_percent || 0
+              const marginColor = margin >= 40 ? 'var(--green)' : margin >= 20 ? 'var(--orange)' : 'var(--red)'
+              const supplierInfo = suppliers.find(s => s.id === p.primary_supplier_id)
+              const alert = window.calcReorderAlert({ ...p, lead_time_days: supplierInfo?.lead_time_days || 30 })
+              const alertBadge = alert.urgency === 'critical' ? '<span class="badge badge-red">CRITICAL</span>' : alert.urgency === 'soon' ? '<span class="badge badge-orange">SOON</span>' : alert.urgency === 'monitor' ? '<span class="badge badge-blue">MONITOR</span>' : '<span class="badge badge-green">OK</span>'
+              return `<tr>
+                <td>
+                  <div style="font-weight:600">${window.escapeHtml(p.name)}</div>
+                  <div style="font-size:12px;color:var(--text-muted)">${window.escapeHtml(p.sku||'—')}</div>
+                </td>
+                <td style="font-size:13px">${window.escapeHtml(p.suppliers?.company_name||'—')}</td>
+                <td>${window.formatCurrency(p.cost_price)}</td>
+                <td>${window.formatCurrency(p.selling_price)}</td>
+                <td><strong style="color:${marginColor}">${margin.toFixed(1)}%</strong></td>
+                <td>
+                  <span style="font-weight:600;color:${stockColor}">${stock}</span>
+                  <div style="font-size:11px;color:${stockColor}">${stockLabel}</div>
+                </td>
+                <td>${alertBadge}</td>
+                <td onclick="event.stopPropagation()">
+                  <div class="action-btns">
+                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editProduct('${p.id}')" title="Edit">✏️</button>
+                    <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${p.id}','${window.escapeHtml(p.name)}')" title="Delete">🗑️</button>
+                  </div>
+                </td>
+              </tr>`
             }).join('')}
           </tbody>
-        </table>
-      `;
+        </table>`
     }
 
-    // ---- MODAL: OPEN ----
-    function openModal(product) {
-      const modal = document.getElementById('productModal');
-      const title = document.getElementById('modalTitle');
-      const form = document.getElementById('productForm');
-
-      form.reset();
-      document.getElementById('productId').value = '';
-      document.getElementById('productShipping').value = '0';
-      document.getElementById('productDuties').value = '0';
-      document.getElementById('productReorderPoint').value = '10';
-      document.getElementById('productReorderQty').value = '50';
-      document.getElementById('productAvgDailySales').value = '1';
-      document.getElementById('productStock').value = '0';
-      document.getElementById('computedLandedCost').textContent = '$0.00';
-      document.getElementById('computedMargin').textContent = '0.0%';
-
-      if (product) {
-        title.textContent = 'Edit Product';
-        document.getElementById('productId').value = product.id;
-        document.getElementById('productName').value = product.name || '';
-        document.getElementById('productSku').value = product.sku || '';
-        document.getElementById('productCategory').value = product.category || '';
-        document.getElementById('productDescription').value = product.description || '';
-        document.getElementById('productSellingPrice').value = product.selling_price != null ? product.selling_price : '';
-        document.getElementById('productCostPrice').value = product.cost_price != null ? product.cost_price : '';
-        document.getElementById('productShipping').value = product.shipping_cost_estimate != null ? product.shipping_cost_estimate : 0;
-        document.getElementById('productDuties').value = product.duties_estimate != null ? product.duties_estimate : 0;
-        document.getElementById('productStock').value = product.stock_quantity != null ? product.stock_quantity : 0;
-        document.getElementById('productReorderPoint').value = product.reorder_point != null ? product.reorder_point : 10;
-        document.getElementById('productReorderQty').value = product.reorder_quantity != null ? product.reorder_quantity : 50;
-        document.getElementById('productAvgDailySales').value = product.avg_daily_sales != null ? product.avg_daily_sales : 1;
-        document.getElementById('productSupplier').value = product.primary_supplier_id || '';
-        document.getElementById('productNotes').value = product.notes || '';
-        updateComputedFields();
-      } else {
-        title.textContent = 'Add Product';
-      }
-
-      modal.classList.add('show');
+    function calcLive() {
+      const sell = parseFloat(document.getElementById('f-sell').value) || 0
+      const cost = parseFloat(document.getElementById('f-cost').value) || 0
+      const ship = parseFloat(document.getElementById('f-shipping').value) || 0
+      const duties = parseFloat(document.getElementById('f-duties').value) || 0
+      const landed = window.calcLandedCost(cost, ship, duties)
+      const margin = window.calcMargin(sell, landed)
+      document.getElementById('c-landed').textContent = window.formatCurrency(landed)
+      const mc = document.getElementById('c-margin')
+      mc.textContent = margin.toFixed(1) + '%'
+      mc.style.color = margin >= 40 ? 'var(--green)' : margin >= 20 ? 'var(--orange)' : 'var(--red)'
     }
 
-    // ---- MODAL: CLOSE ----
-    function closeModal() {
-      document.getElementById('productModal').classList.remove('show');
+    function openModal() { clearForm(); document.getElementById('modal').classList.add('active') }
+    function closeModal() { document.getElementById('modal').classList.remove('active') }
+
+    function clearForm() {
+      document.getElementById('edit-id').value = ''
+      document.getElementById('modal-title').textContent = 'Add Product'
+      ;['f-name','f-sku','f-barcode','f-hts','f-notes'].forEach(id => document.getElementById(id).value = '')
+      document.getElementById('f-sell').value = ''
+      document.getElementById('f-cost').value = ''
+      document.getElementById('f-shipping').value = ''
+      document.getElementById('f-duties').value = ''
+      document.getElementById('f-weight').value = ''
+      document.getElementById('f-stock').value = 0
+      document.getElementById('f-reorder').value = 10
+      document.getElementById('f-reorder-qty').value = 50
+      document.getElementById('f-daily').value = 1
+      document.getElementById('f-supplier').value = ''
+      document.getElementById('f-category').value = ''
+      document.getElementById('c-landed').textContent = '$0.00'
+      document.getElementById('c-margin').textContent = '0.0%'
+      document.getElementById('modal-error').textContent = ''
     }
 
-    // ---- COMPUTED FIELDS (live update) ----
-    function updateComputedFields() {
-      const cost = parseFloat(document.getElementById('productCostPrice').value) || 0;
-      const shipping = parseFloat(document.getElementById('productShipping').value) || 0;
-      const duties = parseFloat(document.getElementById('productDuties').value) || 0;
-      const selling = parseFloat(document.getElementById('productSellingPrice').value) || 0;
-
-      const landed = cost + shipping + duties;
-      const margin = selling > 0 ? ((selling - landed) / selling * 100) : 0;
-
-      document.getElementById('computedLandedCost').textContent = formatCurrency(landed);
-
-      const marginEl = document.getElementById('computedMargin');
-      marginEl.textContent = margin.toFixed(1) + '%';
-
-      // Color the margin display
-      if (margin > 40) {
-        marginEl.style.color = '#00d4aa';
-        marginEl.style.borderColor = 'rgba(0,212,170,.2)';
-        marginEl.style.background = 'rgba(0,212,170,.06)';
-      } else if (margin >= 20) {
-        marginEl.style.color = '#f59e0b';
-        marginEl.style.borderColor = 'rgba(245,158,11,.2)';
-        marginEl.style.background = 'rgba(245,158,11,.06)';
-      } else {
-        marginEl.style.color = '#ff4757';
-        marginEl.style.borderColor = 'rgba(255,71,87,.2)';
-        marginEl.style.background = 'rgba(255,71,87,.06)';
-      }
+    function editProduct(id) {
+      const p = products.find(x => x.id === id)
+      if (!p) return
+      clearForm()
+      document.getElementById('modal-title').textContent = 'Edit Product'
+      document.getElementById('edit-id').value = id
+      document.getElementById('f-name').value = p.name || ''
+      document.getElementById('f-sku').value = p.sku || ''
+      document.getElementById('f-barcode').value = p.barcode || ''
+      document.getElementById('f-hts').value = p.hts_code || ''
+      document.getElementById('f-notes').value = p.notes || ''
+      document.getElementById('f-sell').value = p.selling_price || ''
+      document.getElementById('f-cost').value = p.cost_price || ''
+      document.getElementById('f-shipping').value = p.shipping_cost_estimate || ''
+      document.getElementById('f-duties').value = p.duties_estimate || ''
+      document.getElementById('f-weight').value = p.weight_kg || ''
+      document.getElementById('f-stock').value = p.stock_quantity || 0
+      document.getElementById('f-reorder').value = p.reorder_point || 10
+      document.getElementById('f-reorder-qty').value = p.reorder_quantity || 50
+      document.getElementById('f-daily').value = p.avg_daily_sales || 1
+      if (p.primary_supplier_id) document.getElementById('f-supplier').value = p.primary_supplier_id
+      if (p.category) document.getElementById('f-category').value = p.category
+      calcLive()
+      document.getElementById('modal').classList.add('active')
     }
 
-    // ---- SAVE PRODUCT ----
     async function saveProduct() {
-      const id = document.getElementById('productId').value;
-      const productName = document.getElementById('productName').value.trim();
-
-      if (!productName) {
-        showToast('Product name is required', 'error');
-        return;
+      const name = document.getElementById('f-name').value.trim()
+      if (!name) { document.getElementById('modal-error').textContent = 'Product name is required.'; return }
+      const btn = document.getElementById('save-btn')
+      btn.textContent = 'Saving...'
+      btn.disabled = true
+      const user = await window.getUser()
+      const cost = parseFloat(document.getElementById('f-cost').value) || 0
+      const ship = parseFloat(document.getElementById('f-shipping').value) || 0
+      const duties = parseFloat(document.getElementById('f-duties').value) || 0
+      const sell = parseFloat(document.getElementById('f-sell').value) || 0
+      const landed = window.calcLandedCost(cost, ship, duties)
+      const margin = window.calcMargin(sell, landed)
+      const supplierId = document.getElementById('f-supplier').value || null
+      const data = {
+        user_id: user.id, name,
+        sku: document.getElementById('f-sku').value.trim(),
+        barcode: document.getElementById('f-barcode').value.trim(),
+        hts_code: document.getElementById('f-hts').value.trim(),
+        category: document.getElementById('f-category').value,
+        selling_price: sell, cost_price: cost,
+        shipping_cost_estimate: ship, duties_estimate: duties,
+        landed_cost: landed, margin_percent: margin,
+        stock_quantity: parseInt(document.getElementById('f-stock').value) || 0,
+        reorder_point: parseInt(document.getElementById('f-reorder').value) || 10,
+        reorder_quantity: parseInt(document.getElementById('f-reorder-qty').value) || 50,
+        avg_daily_sales: parseFloat(document.getElementById('f-daily').value) || 1,
+        weight_kg: parseFloat(document.getElementById('f-weight').value) || null,
+        primary_supplier_id: supplierId,
+        notes: document.getElementById('f-notes').value.trim()
       }
-
-      const cost = parseFloat(document.getElementById('productCostPrice').value) || 0;
-      const shipping = parseFloat(document.getElementById('productShipping').value) || 0;
-      const duties = parseFloat(document.getElementById('productDuties').value) || 0;
-      const selling = parseFloat(document.getElementById('productSellingPrice').value) || 0;
-      const landedCost = cost + shipping + duties;
-      const marginPercent = selling > 0 ? ((selling - landedCost) / selling * 100) : 0;
-
-      const supplierVal = document.getElementById('productSupplier').value;
-
-      const record = {
-        user_id: currentUser.id,
-        name: productName,
-        sku: document.getElementById('productSku').value.trim() || null,
-        category: document.getElementById('productCategory').value || null,
-        description: document.getElementById('productDescription').value.trim() || null,
-        selling_price: selling,
-        cost_price: cost,
-        shipping_cost_estimate: shipping,
-        duties_estimate: duties,
-        landed_cost: landedCost,
-        margin_percent: parseFloat(marginPercent.toFixed(2)),
-        stock_quantity: parseInt(document.getElementById('productStock').value) || 0,
-        reorder_point: parseInt(document.getElementById('productReorderPoint').value) || 10,
-        reorder_quantity: parseInt(document.getElementById('productReorderQty').value) || 50,
-        avg_daily_sales: parseFloat(document.getElementById('productAvgDailySales').value) || 1,
-        primary_supplier_id: supplierVal || null,
-        notes: document.getElementById('productNotes').value.trim() || null,
-      };
-
-      let result;
-
-      if (id) {
-        // Update
-        result = await window._supabase
-          .from('products')
-          .update(record)
-          .eq('id', id)
-          .eq('user_id', currentUser.id)
-          .select('*, suppliers(company_name)');
+      const editId = document.getElementById('edit-id').value
+      let error
+      if (editId) {
+        ({ error } = await window._sb.from('products').update(data).eq('id', editId))
       } else {
-        // Insert
-        result = await window._supabase
-          .from('products')
-          .insert(record)
-          .select('*, suppliers(company_name)');
+        ({ error } = await window._sb.from('products').insert(data))
       }
-
-      if (result.error) {
-        console.error('Save error:', result.error);
-        showToast('Failed to save product: ' + result.error.message, 'error');
-        return;
-      }
-
-      showToast(id ? 'Product updated successfully' : 'Product added successfully', 'success');
-      closeModal();
-      await loadProducts();
+      btn.textContent = 'Save Product'
+      btn.disabled = false
+      if (error) { document.getElementById('modal-error').textContent = error.message; return }
+      window.showToast(editId ? 'Product updated!' : 'Product added!', 'success')
+      closeModal()
+      await load()
     }
 
-    // ---- EDIT PRODUCT ----
-    function editProduct(productId) {
-      const product = allProducts.find(p => p.id === productId);
-      if (!product) return;
-      openModal(product);
+    function askDelete(id, name) { deleteId = id; document.getElementById('delete-name').textContent = name; document.getElementById('delete-modal').classList.add('active') }
+    function closeDeleteModal() { document.getElementById('delete-modal').classList.remove('active'); deleteId = null }
+    async function confirmDelete() {
+      if (!deleteId) return
+      const { error } = await window._sb.from('products').delete().eq('id', deleteId)
+      if (error) { window.showToast('Error: ' + error.message, 'error'); return }
+      window.showToast('Product deleted.', 'success')
+      closeDeleteModal()
+      await load()
     }
 
-    // ---- DELETE PRODUCT ----
-    async function deleteProduct(productId) {
-      if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return;
-
-      const { error } = await window._supabase
-        .from('products')
-        .delete()
-        .eq('id', productId)
-        .eq('user_id', currentUser.id);
-
-      if (error) {
-        console.error('Delete error:', error);
-        showToast('Failed to delete product: ' + error.message, 'error');
-        return;
-      }
-
-      showToast('Product deleted', 'success');
-      await loadProducts();
-    }
-
-    // ---- EVENT LISTENERS ----
-    function setupEventListeners() {
-      // Add product button
-      document.getElementById('addProductBtn').addEventListener('click', () => openModal());
-
-      // Modal close
-      document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-      document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
-
-      // Click outside modal to close
-      document.getElementById('productModal').addEventListener('click', (e) => {
-        if (e.target === document.getElementById('productModal')) closeModal();
-      });
-
-      // Save
-      document.getElementById('modalSaveBtn').addEventListener('click', saveProduct);
-
-      // Live computation on price fields
-      const priceFields = ['productCostPrice', 'productShipping', 'productDuties', 'productSellingPrice'];
-      priceFields.forEach(fieldId => {
-        document.getElementById(fieldId).addEventListener('input', updateComputedFields);
-      });
-
-      // Filters
-      document.getElementById('searchInput').addEventListener('input', renderTable);
-      document.getElementById('filterCategory').addEventListener('change', renderTable);
-      document.getElementById('filterSupplier').addEventListener('change', renderTable);
-      document.getElementById('filterStock').addEventListener('change', renderTable);
-
-      // Enter key on form saves
-      document.getElementById('productForm').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-          e.preventDefault();
-          saveProduct();
-        }
-      });
-    }
-
-    // ---- START ----
-    init();
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDeleteModal() } })
+    load()
   </script>
 </body>
 </html>
