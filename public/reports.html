@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supploxi — Reports</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .report-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:24px; }
+    .metric-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+    .metric-row:last-child { border-bottom:none; }
+    .bar-chart { display:flex; align-items:flex-end; gap:8px; height:100px; margin-top:16px; }
+    .bar { flex:1; border-radius:4px 4px 0 0; transition:height 0.5s; min-height:4px; cursor:pointer; position:relative; }
+    .bar-label { font-size:10px; color:var(--text-muted); text-align:center; margin-top:4px; }
+    .bar-val { position:absolute; top:-20px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:600; white-space:nowrap; }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="page-content">
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('supplier',this)">🏭 Supplier Performance</div>
+        <div class="tab" onclick="switchTab('inventory',this)">📦 Inventory Turnover</div>
+        <div class="tab" onclick="switchTab('shipment',this)">✈️ Shipment Performance</div>
+      </div>
+
+      <div id="report-content">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/business-logic.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let suppliers = [], products = [], orders = [], shipments = []
+
+    async function load() {
+      const user = await window.requireAuth()
+      await window.initLayout({ page: 'reports', title: 'Reports' })
+      const [{ data: s }, { data: p }, { data: o }, { data: sh }] = await Promise.all([
+        window._sb.from('suppliers').select('*').eq('user_id', user.id),
+        window._sb.from('products').select('*').eq('user_id', user.id),
+        window._sb.from('purchase_orders').select('*').eq('user_id', user.id),
+        window._sb.from('shipments').select('*').eq('user_id', user.id)
+      ])
+      suppliers = s || []
+      products = p || []
+      orders = o || []
+      shipments = sh || []
+      switchTab('supplier', document.querySelector('.tab'))
+    }
+
+    function switchTab(tab, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+      if (el) el.classList.add('active')
+
+      if (tab === 'supplier') {
+        const sorted = [...suppliers].sort((a,b) => (b.score||100)-(a.score||100))
+        const avgScore = suppliers.length ? Math.round(suppliers.reduce((a,s)=>a+(s.score||100),0)/suppliers.length) : 0
+        const avgOnTime = suppliers.length ? Math.round(suppliers.reduce((a,s)=>a+(s.on_time_rate||100),0)/suppliers.length) : 0
+        const topSpend = [...suppliers].sort((a,b)=>(b.total_spent||0)-(a.total_spent||0)).slice(0,1)[0]
+
+        document.getElementById('report-content').innerHTML = `
+          <div class="stats-grid" style="margin-bottom:24px">
+            <div class="stat-card"><div class="stat-label">Avg Supplier Score</div><div class="stat-value" style="color:${avgScore>=80?'var(--green)':'var(--orange)'}">${avgScore}</div><div class="stat-sub">Out of 100</div></div>
+            <div class="stat-card"><div class="stat-label">Avg On-Time Rate</div><div class="stat-value">${avgOnTime}%</div><div class="stat-sub">Delivery performance</div></div>
+            <div class="stat-card"><div class="stat-label">Total Suppliers</div><div class="stat-value">${suppliers.length}</div><div class="stat-sub">${suppliers.filter(s=>s.status==='active').length} active</div></div>
+            <div class="stat-card"><div class="stat-label">Top Supplier</div><div class="stat-value" style="font-size:16px;padding-top:8px">${window.escapeHtml(topSpend?.company_name||'—')}</div><div class="stat-sub">${window.formatCurrency(topSpend?.total_spent||0)} spent</div></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+            <div class="report-card">
+              <div style="font-weight:600;font-size:15px;margin-bottom:16px">Supplier Scorecard</div>
+              ${sorted.map(s => {
+                const score = s.score || 100
+                const color = score>=80?'var(--green)':score>=60?'var(--orange)':'var(--red)'
+                return `<div class="metric-row">
+                  <div>
+                    <div style="font-weight:500;font-size:13px">${window.escapeHtml(s.company_name)}</div>
+                    <div style="font-size:12px;color:var(--text-muted)">${s.country||''} · ${s.total_orders||0} orders</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-size:20px;font-weight:700;color:${color}">${score}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">On-time: ${s.on_time_rate||100}%</div>
+                  </div>
+                </div>`
+              }).join('') || '<p style="color:var(--text-muted)">No suppliers yet</p>'}
+            </div>
+
+            <div class="report-card">
+              <div style="font-weight:600;font-size:15px;margin-bottom:16px">Spend Distribution</div>
+              ${(() => {
+                const total = suppliers.reduce((a,s)=>a+(s.total_spent||0),0) || 1
+                return [...suppliers].sort((a,b)=>(b.total_spent||0)-(a.total_spent||0)).map(s => {
+                  const pct = Math.round((s.total_spent||0)/total*100)
+                  return `<div style="margin-bottom:12px">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">
+                      <span>${window.escapeHtml(s.company_name)}</span>
+                      <span>${window.formatCurrency(s.total_spent||0)} (${pct}%)</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+                  </div>`
+                }).join('') || '<p style="color:var(--text-muted)">No spend data yet</p>'
+              })()}
+            </div>
+          </div>`
+      }
+
+      if (tab === 'inventory') {
+        const totalValue = products.reduce((a,p)=>a+(p.stock_quantity||0)*(p.cost_price||0),0)
+        const outOfStock = products.filter(p=>(p.stock_quantity||0)===0).length
+        const lowStock = products.filter(p=>(p.stock_quantity||0)>0&&(p.stock_quantity||0)<=(p.reorder_point||10)).length
+        const healthy = products.length - outOfStock - lowStock
+        const avgTurnover = products.filter(p=>p.avg_daily_sales>0&&p.stock_quantity>0).map(p=>(p.avg_daily_sales*30)/(p.stock_quantity)||0)
+        const avgT = avgTurnover.length ? (avgTurnover.reduce((a,v)=>a+v,0)/avgTurnover.length).toFixed(1) : 0
+
+        document.getElementById('report-content').innerHTML = `
+          <div class="stats-grid" style="margin-bottom:24px">
+            <div class="stat-card"><div class="stat-label">Inventory Value</div><div class="stat-value">${window.formatCurrency(totalValue)}</div><div class="stat-sub">At cost</div></div>
+            <div class="stat-card"><div class="stat-label">Avg Monthly Turnover</div><div class="stat-value">${avgT}x</div><div class="stat-sub">Units sold / stock</div></div>
+            <div class="stat-card"><div class="stat-label">Healthy SKUs</div><div class="stat-value" style="color:var(--green)">${healthy}</div><div class="stat-sub">Above reorder point</div></div>
+            <div class="stat-card"><div class="stat-label">Problem SKUs</div><div class="stat-value" style="color:var(--red)">${outOfStock + lowStock}</div><div class="stat-sub">${outOfStock} out + ${lowStock} low</div></div>
+          </div>
+
+          <div class="report-card">
+            <div style="font-weight:600;font-size:15px;margin-bottom:4px">Product Inventory Status</div>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Days of stock remaining based on average daily sales velocity</p>
+            <table style="width:100%">
+              <thead><tr>
+                <th style="text-align:left;padding:8px;font-size:12px;color:var(--text-muted)">Product</th>
+                <th style="text-align:left;padding:8px;font-size:12px;color:var(--text-muted)">Stock</th>
+                <th style="text-align:left;padding:8px;font-size:12px;color:var(--text-muted)">Daily Sales</th>
+                <th style="text-align:left;padding:8px;font-size:12px;color:var(--text-muted)">Days Left</th>
+                <th style="text-align:left;padding:8px;font-size:12px;color:var(--text-muted)">Inventory Value</th>
+                <th style="text-align:left;padding:8px;font-size:12px;color:var(--text-muted)">Status</th>
+              </tr></thead>
+              <tbody>
+                ${[...products].sort((a,b)=>{
+                  const dA = (a.stock_quantity||0)/(a.avg_daily_sales||1)
+                  const dB = (b.stock_quantity||0)/(b.avg_daily_sales||1)
+                  return dA-dB
+                }).map(p => {
+                  const days = Math.floor((p.stock_quantity||0)/(p.avg_daily_sales||1))
+                  const val = (p.stock_quantity||0)*(p.cost_price||0)
+                  const status = (p.stock_quantity||0)===0 ? 'out' : (p.stock_quantity||0)<=(p.reorder_point||10) ? 'low' : 'ok'
+                  const statusColor = status==='out'?'var(--red)':status==='low'?'var(--orange)':'var(--green)'
+                  const statusLabel = status==='out'?'Out of Stock':status==='low'?'Low Stock':'In Stock'
+                  return `<tr>
+                    <td style="padding:10px 8px;font-size:13px;font-weight:500">${window.escapeHtml(p.name)}</td>
+                    <td style="padding:10px 8px;font-size:13px">${p.stock_quantity||0}</td>
+                    <td style="padding:10px 8px;font-size:13px">${p.avg_daily_sales||1}/day</td>
+                    <td style="padding:10px 8px;font-size:13px;color:${days<14?'var(--red)':days<30?'var(--orange)':'inherit'};font-weight:600">${days}d</td>
+                    <td style="padding:10px 8px;font-size:13px">${window.formatCurrency(val)}</td>
+                    <td style="padding:10px 8px"><span style="font-size:12px;color:${statusColor};font-weight:600">${statusLabel}</span></td>
+                  </tr>`
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`
+      }
+
+      if (tab === 'shipment') {
+        const delivered = shipments.filter(s=>s.status==='delivered')
+        const avgDays = delivered.length ? Math.round(delivered.reduce((a,s)=>a+(s.days_in_transit||0),0)/delivered.length) : 0
+        const onTime = delivered.filter(s=>!s.estimated_arrival || new Date(s.actual_arrival||s.estimated_arrival)<=new Date(s.estimated_arrival)).length
+        const onTimePct = delivered.length ? Math.round(onTime/delivered.length*100) : 0
+        const exceptions = shipments.filter(s=>s.status==='exception').length
+        const totalCost = shipments.reduce((a,s)=>a+(s.shipping_cost||0)+(s.customs_duty||0),0)
+
+        document.getElementById('report-content').innerHTML = `
+          <div class="stats-grid" style="margin-bottom:24px">
+            <div class="stat-card"><div class="stat-label">Total Shipments</div><div class="stat-value">${shipments.length}</div><div class="stat-sub">${delivered.length} delivered</div></div>
+            <div class="stat-card"><div class="stat-label">Avg Transit Time</div><div class="stat-value">${avgDays}<span style="font-size:16px"> days</span></div><div class="stat-sub">Door to door</div></div>
+            <div class="stat-card"><div class="stat-label">On-Time Rate</div><div class="stat-value" style="color:${onTimePct>=90?'var(--green)':'var(--orange)'}">${onTimePct}%</div><div class="stat-sub">Delivered on time</div></div>
+            <div class="stat-card"><div class="stat-label">Total Shipping Cost</div><div class="stat-value">${window.formatCurrency(totalCost)}</div><div class="stat-sub">Incl. customs duties</div></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+            <div class="report-card">
+              <div style="font-weight:600;font-size:15px;margin-bottom:16px">Shipment Status Breakdown</div>
+              ${(() => {
+                const groups = { processing:'Processing', in_transit:'In Transit', customs:'In Customs', out_for_delivery:'Out for Delivery', delivered:'Delivered', exception:'Exception' }
+                const colors = { processing:'var(--blue)', in_transit:'var(--blue)', customs:'var(--orange)', out_for_delivery:'var(--purple)', delivered:'var(--green)', exception:'var(--red)' }
+                return Object.entries(groups).map(([key,label]) => {
+                  const count = shipments.filter(s=>s.status===key).length
+                  const pct = shipments.length ? Math.round(count/shipments.length*100) : 0
+                  return `<div class="metric-row">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:10px;height:10px;border-radius:50%;background:${colors[key]}"></div>
+                      <span style="font-size:13px">${label}</span>
+                    </div>
+                    <div style="text-align:right">
+                      <strong>${count}</strong>
+                      <span style="font-size:12px;color:var(--text-muted);margin-left:6px">${pct}%</span>
+                    </div>
+                  </div>`
+                }).join('')
+              })()}
+            </div>
+
+            <div class="report-card">
+              <div style="font-weight:600;font-size:15px;margin-bottom:16px">Recent Shipments</div>
+              ${shipments.slice(0,6).map(s => `
+                <div class="metric-row" style="cursor:pointer" onclick="window.location.href='/shipment-detail.html?id=${s.id}'">
+                  <div>
+                    <div style="font-size:13px;font-weight:500;font-family:monospace">${window.escapeHtml(s.tracking_number)}</div>
+                    <div style="font-size:12px;color:var(--text-muted)">${window.formatDate(s.ship_date)} · ${s.days_in_transit||0}d in transit</div>
+                  </div>
+                  ${window.getStatusBadge(s.status)}
+                </div>`).join('') || '<p style="color:var(--text-muted)">No shipments yet</p>'}
+            </div>
+          </div>`
+      }
+    }
+
+    load()
+  </script>
+</body>
+</html>

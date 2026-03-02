@@ -91,6 +91,26 @@ setInterval(() => {
 }, SIX_HOURS);
 
 // =============================================
+// HTML PAGE ROUTES
+// =============================================
+
+// Serve todas as páginas HTML
+const pages = ['dashboard','onboarding','suppliers','suppliers-detail','products',
+  'purchase-orders','po-detail','shipments','shipment-detail',
+  'inventory','financials','tariffs','integrations','settings','reports']
+
+pages.forEach(page => {
+  app.get(`/${page}.html`, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', `${page}.html`))
+  })
+})
+
+// Redirect raiz para index
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'))
+})
+
+// =============================================
 // START SERVER
 // =============================================
 app.listen(PORT, () => {
