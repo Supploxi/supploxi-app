@@ -177,7 +177,7 @@
         .eq('user_id', user.id)
         .single()
 
-      if (!profile || !profile.onboarding_completed) {
+      if (!profile || profile.onboarding_completed !== true) {
         window.location.href = '/onboarding.html'
         return
       }

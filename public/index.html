@@ -24,8 +24,9 @@
     .divider::before { left: 0; }
     .divider::after { right: 0; }
     .forgot-link { font-size: 13px; color: var(--green); cursor: pointer; float: right; margin-top: -4px; }
-    .terms-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text-muted); }
-    .terms-check input { margin-top: 2px; accent-color: var(--green); }
+    .terms-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .terms-check input { margin-top: 3px; flex-shrink: 0; accent-color: var(--green); }
+    .terms-check a { white-space: nowrap; }
     .success-msg { background: var(--green-dim); border: 1px solid rgba(0,212,170,0.3); border-radius: var(--radius-sm); padding: 14px; color: var(--green); font-size: 14px; text-align: center; display: none; }
   </style>
 </head>
@@ -66,10 +67,6 @@
           Account created! Check your email to confirm, then sign in.
         </div>
         <div id="signup-fields">
-          <div class="form-group">
-            <label class="form-label">Full Name <span class="required">*</span></label>
-            <input type="text" id="signup-name" class="form-input" placeholder="John Smith">
-          </div>
           <div class="form-group">
             <label class="form-label">Email <span class="required">*</span></label>
             <input type="email" id="signup-email" class="form-input" placeholder="you@company.com">
@@ -162,7 +159,6 @@
     }
 
     async function handleSignUp() {
-      const name = document.getElementById('signup-name').value.trim()
       const email = document.getElementById('signup-email').value.trim()
       const password = document.getElementById('signup-password').value
       const confirm = document.getElementById('signup-confirm').value
@@ -171,7 +167,7 @@
       const btn = document.getElementById('signup-btn')
       errEl.textContent = ''
 
-      if (!name || !email || !password) { errEl.textContent = 'Please fill in all fields.'; return }
+      if (!email || !password) { errEl.textContent = 'Please fill in all fields.'; return }
       if (password.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return }
       if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; return }
       if (!terms) { errEl.textContent = 'Please accept the Terms of Service.'; return }
@@ -181,8 +177,7 @@
 
       const { data, error } = await window._sb.auth.signUp({
         email,
-        password,
-        options: { data: { full_name: name } }
+        password
       })
 
       if (error) {

@@ -160,19 +160,15 @@
           <p>Sync products and inventory automatically. You can always do this later in Settings.</p>
           <div class="platform-grid">
             <div class="platform-btn" onclick="selectPlatform(this, 'shopify')">
-              <div style="font-size:28px;margin-bottom:8px">&#x1F6CD;&#xFE0F;</div>
               Shopify
             </div>
             <div class="platform-btn" onclick="selectPlatform(this, 'woocommerce')">
-              <div style="font-size:28px;margin-bottom:8px">&#x1F537;</div>
               WooCommerce
             </div>
             <div class="platform-btn" onclick="selectPlatform(this, 'bigcommerce')">
-              <div style="font-size:28px;margin-bottom:8px">&#x1F3EC;</div>
               BigCommerce
             </div>
             <div class="platform-btn" onclick="selectPlatform(this, 'other')">
-              <div style="font-size:28px;margin-bottom:8px">&#x1F310;</div>
               Other / Later
             </div>
           </div>
@@ -197,12 +193,12 @@
 
     // Guard: redirect already-onboarded users to dashboard
     ;(async () => {
-      const user = await window.getUser()
+      const user = await window.requireAuth()
       if (!user) return
       const { data: profile } = await window._sb
         .from('user_profiles').select('onboarding_completed')
         .eq('user_id', user.id).single()
-      if (profile?.onboarding_completed) {
+      if (profile?.onboarding_completed === true) {
         window.location.href = '/dashboard.html'
       }
     })()
@@ -291,13 +287,28 @@
 
     async function finishOnboarding() {
       const user = await window.getUser()
-      if (user) {
-        await window._sb.from('user_profiles').upsert({
-          user_id: user.id,
-          onboarding_completed: true
-        })
+      if (!user) { window.location.href = '/'; return }
+      const { error } = await window._sb.from('user_profiles').upsert({
+        user_id: user.id,
+        onboarding_completed: true
+      })
+      if (error) {
+        console.error('Failed to save onboarding:', error.message)
+        alert('Error saving your setup. Please try again.')
+        return
       }
-      window.location.href = '/dashboard.html'
+      // Verify it actually saved before redirecting
+      const { data: check } = await window._sb
+        .from('user_profiles')
+        .select('onboarding_completed')
+        .eq('user_id', user.id)
+        .single()
+      if (check?.onboarding_completed === true) {
+        window.location.href = '/dashboard.html'
+      } else {
+        console.error('Onboarding flag not persisted')
+        alert('Error saving your setup. Please try again.')
+      }
     }
   </script>
 </body>
