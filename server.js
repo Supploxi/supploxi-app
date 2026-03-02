@@ -5,7 +5,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const TRACK17_API_KEY = '7BD934C7225858A7C06EBA621E026BEB';
+const TRACK17_API_KEY = process.env.TRACKING_API_KEY || '7BD934C7225858A7C06EBA621E026BEB';
 const TRACK17_BASE = 'https://api.17track.net/track/v2.2';
 
 // =============================================
@@ -80,32 +80,7 @@ app.post('/api/tracking/getinfo', async (req, res) => {
   }
 });
 
-// =============================================
-// AUTO-SYNC JOB (every 6 hours)
-// =============================================
-const SIX_HOURS = 6 * 60 * 60 * 1000;
-
-setInterval(() => {
-  console.log('[17Track Sync] Running scheduled sync...');
-  // Sync logic will be added in a future part
-}, SIX_HOURS);
-
-// =============================================
-// HTML PAGE ROUTES
-// =============================================
-
-// Serve todas as páginas HTML
-const pages = ['dashboard','onboarding','suppliers','suppliers-detail','products',
-  'purchase-orders','po-detail','shipments','shipment-detail',
-  'inventory','financials','tariffs','integrations','settings','reports']
-
-pages.forEach(page => {
-  app.get(`/${page}.html`, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', `${page}.html`))
-  })
-})
-
-// Redirect raiz para index
+// Redirect root to index
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
@@ -116,5 +91,4 @@ app.get('/', (req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Supploxi v2 running at http://localhost:${PORT}`);
   console.log('17Track integration: ENABLED');
-  console.log(`Auto-sync scheduled every 6 hours`);
 });

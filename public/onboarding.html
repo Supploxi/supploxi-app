@@ -195,6 +195,18 @@
     let currentStep = 1
     let savedSupplierId = null
 
+    // Guard: redirect already-onboarded users to dashboard
+    ;(async () => {
+      const user = await window.getUser()
+      if (!user) return
+      const { data: profile } = await window._sb
+        .from('user_profiles').select('onboarding_completed')
+        .eq('user_id', user.id).single()
+      if (profile?.onboarding_completed) {
+        window.location.href = '/dashboard.html'
+      }
+    })()
+
     async function nextStep(step) {
       const user = await window.getUser()
       if (!user) { window.location.href = '/'; return }

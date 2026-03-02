@@ -202,7 +202,7 @@
       await window.initLayout({ page: 'products', title: 'Products' })
       const [{ data: p }, { data: s }] = await Promise.all([
         window._sb.from('products').select('*, suppliers(company_name)').eq('user_id', user.id).order('created_at', { ascending: false }),
-        window._sb.from('suppliers').select('id,company_name').eq('user_id', user.id).eq('status','active')
+        window._sb.from('suppliers').select('id,company_name,lead_time_days').eq('user_id', user.id).eq('status','active')
       ])
       products = p || []
       suppliers = s || []

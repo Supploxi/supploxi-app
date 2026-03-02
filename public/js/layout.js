@@ -77,7 +77,7 @@ window.initLayout = async (config = {}) => {
     <header class="navbar">
       <span class="navbar-title">${window.escapeHtml(title)}</span>
       <div class="navbar-actions">
-        <div class="notification-btn" onclick="window.location.href='/notifications.html'">
+        <div class="notification-btn" onclick="window.showToast('Notifications coming soon','info')" title="Notifications">
           \uD83D\uDD14
           ${notifBadge}
         </div>
