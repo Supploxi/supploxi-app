@@ -181,12 +181,11 @@
         const accepted = data?.data?.accepted
         if (accepted?.length > 0) {
           const result = accepted[0]
-          const trackInfo = result.track
+          const trackInfo = result.track_info
 
-          console.log('[Tracking] Track keys:', Object.keys(trackInfo || {}))
-          console.log('[Tracking] track.e:', trackInfo?.e, '| track.w1:', trackInfo?.w1)
-          console.log('[Tracking] track.z0:', JSON.stringify(trackInfo?.z0))
-          console.log('[Tracking] track.z1 count:', trackInfo?.z1?.length || 0)
+          console.log('[Tracking] track_info keys:', Object.keys(trackInfo || {}))
+          console.log('[Tracking] latest_status:', JSON.stringify(trackInfo?.latest_status))
+          console.log('[Tracking] latest_event:', JSON.stringify(trackInfo?.latest_event))
 
           if (!trackInfo) {
             window.showToast('No tracking data available yet.', 'info')
@@ -195,26 +194,27 @@
             return
           }
 
-          // Status: use track.e (numeric) or track.w1 (string tag)
-          // NOT z0.z which is just the event description text
-          const statusCode = trackInfo.e
-          const statusTag = trackInfo.w1
-          const newStatus = window.map17TrackStatus(statusCode, statusTag)
-          console.log('[Tracking] Mapped status:', { code: statusCode, tag: statusTag, result: newStatus })
+          // Status from track_info.latest_status.status (string: "InTransit", "Delivered", etc.)
+          const statusStr = trackInfo.latest_status?.status || ''
+          const subStatus = trackInfo.latest_status?.sub_status || ''
+          // Check sub_status for customs hold before general mapping
+          const newStatus = subStatus.includes('CustomsHold') ? 'customs' : window.map17TrackStatus(statusStr)
+          console.log('[Tracking] Mapped status:', { apiStatus: statusStr, subStatus, result: newStatus })
 
-          // Events from z1 array, latest event from z0
-          const events = trackInfo.z1 || []
-          const latestEvent = trackInfo.z0 || events[0] || null
+          // Events from track_info.tracking.providers[0].events
+          const events = trackInfo.tracking?.providers?.[0]?.events || []
+          const latestEvent = trackInfo.latest_event || events[0] || null
+          console.log('[Tracking] Events count:', events.length)
 
           // Save events to tracking_events table
           if (events.length > 0) {
             await window._sb.from('tracking_events').delete().eq('shipment_id', shipId)
             const { error: insertErr } = await window._sb.from('tracking_events').insert(events.map(ev => ({
               shipment_id: shipId,
-              event_time: ev.a ? new Date(ev.a).toISOString() : new Date().toISOString(),
-              location: ev.c || '',
-              description: ev.z || '',
-              status_code: String(statusCode ?? '')
+              event_time: ev.time_iso ? new Date(ev.time_iso).toISOString() : new Date().toISOString(),
+              location: ev.location || '',
+              description: ev.description || '',
+              status_code: ev.stage || statusStr
             })))
             if (insertErr) console.error('[Tracking] Error saving events:', insertErr.message)
           }
@@ -225,11 +225,12 @@
             last_synced_at: new Date().toISOString()
           }
           if (latestEvent) {
-            updateData.last_event = latestEvent.z || ''
-            updateData.last_event_location = latestEvent.c || ''
+            updateData.last_event = latestEvent.description || ''
+            updateData.last_event_location = latestEvent.location || ''
           }
-          if (trackInfo.c) {
-            updateData.carrier_detected = trackInfo.c
+          const providerName = trackInfo.tracking?.providers?.[0]?.provider?.name
+          if (providerName) {
+            updateData.carrier_detected = providerName
           }
 
           const { error: updateErr } = await window._sb.from('shipments').update(updateData).eq('id', shipId)

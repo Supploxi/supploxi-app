@@ -28,7 +28,7 @@ if (SUPABASE_SERVICE_KEY) {
 // STATUS MAPPING (17Track -> Supploxi)
 // =============================================
 function mapTrackStatus(code, tag) {
-  // Numeric codes (17Track v2.2 track.e field)
+  // Numeric codes (legacy fallback)
   const numericMap = {
     0: 'processing',
     10: 'in_transit',
@@ -42,7 +42,7 @@ function mapTrackStatus(code, tag) {
     return numericMap[code];
   }
 
-  // String tags (track.w1 or legacy)
+  // String tags (track_info.latest_status.status)
   const stringMap = {
     NotFound: 'processing',
     InTransit: 'in_transit',
@@ -144,14 +144,14 @@ app.post('/api/tracking/getinfo', async (req, res) => {
 
     if (data?.data?.accepted?.length > 0) {
       const first = data.data.accepted[0];
-      const t = first.track || {};
-      console.log('[GetInfo] Track keys:', Object.keys(t).join(', '));
-      console.log('[GetInfo] track.e (status code):', t.e);
-      console.log('[GetInfo] track.w1 (status tag):', t.w1);
-      console.log('[GetInfo] track.z0 (latest event):', JSON.stringify(t.z0));
-      console.log('[GetInfo] track.z1 (events count):', t.z1?.length || 0);
-      if (t.z1?.length > 0) {
-        console.log('[GetInfo] First event:', JSON.stringify(t.z1[0]));
+      const ti = first.track_info || {};
+      console.log('[GetInfo] track_info keys:', Object.keys(ti).join(', '));
+      console.log('[GetInfo] latest_status:', JSON.stringify(ti.latest_status));
+      console.log('[GetInfo] latest_event:', JSON.stringify(ti.latest_event));
+      const events = ti.tracking?.providers?.[0]?.events || [];
+      console.log('[GetInfo] events count:', events.length);
+      if (events.length > 0) {
+        console.log('[GetInfo] First event:', JSON.stringify(events[0]));
       }
     }
 
@@ -228,7 +228,7 @@ async function autoSyncTracking() {
       console.log(`[AutoSync] Accepted: ${accepted.length}, Rejected: ${data?.data?.rejected?.length || 0}`);
 
       for (const result of accepted) {
-        const trackInfo = result.track;
+        const trackInfo = result.track_info;
         if (!trackInfo) {
           console.log(`[AutoSync] No track info for ${result.number}`);
           continue;
@@ -237,10 +237,13 @@ async function autoSyncTracking() {
         const ship = batch.find(s => s.tracking_number === result.number);
         if (!ship) continue;
 
-        // Map status — try numeric (track.e) then string (track.w1)
-        const newStatus = mapTrackStatus(trackInfo.e, trackInfo.w1);
-        const events = trackInfo.z1 || [];
-        const latestEvent = trackInfo.z0 || events[0] || null;
+        // Map status from track_info.latest_status.status (string: "InTransit", "Delivered", etc.)
+        const statusStr = trackInfo.latest_status?.status || '';
+        const subStatus = trackInfo.latest_status?.sub_status || '';
+        // Check sub_status for customs hold before general mapping
+        const newStatus = subStatus.includes('CustomsHold') ? 'customs' : mapTrackStatus(statusStr);
+        const events = trackInfo.tracking?.providers?.[0]?.events || [];
+        const latestEvent = trackInfo.latest_event || events[0] || null;
 
         // Update shipment record
         const updateData = {
@@ -249,12 +252,14 @@ async function autoSyncTracking() {
         };
 
         if (latestEvent) {
-          updateData.last_event = latestEvent.z || '';
-          updateData.last_event_location = latestEvent.c || '';
+          updateData.last_event = latestEvent.description || '';
+          updateData.last_event_location = latestEvent.location || '';
         }
 
-        if (trackInfo.c) {
-          updateData.carrier_detected = trackInfo.c;
+        // Carrier from result.carrier or provider name
+        const providerName = trackInfo.tracking?.providers?.[0]?.provider?.name;
+        if (providerName) {
+          updateData.carrier_detected = providerName;
         }
 
         const { error: updateErr } = await sbAdmin
@@ -274,10 +279,10 @@ async function autoSyncTracking() {
           const { error: evtErr } = await sbAdmin.from('tracking_events').insert(
             events.map(ev => ({
               shipment_id: ship.id,
-              event_time: ev.a ? new Date(ev.a).toISOString() : new Date().toISOString(),
-              location: ev.c || '',
-              description: ev.z || '',
-              status_code: String(trackInfo.e ?? ''),
+              event_time: ev.time_iso ? new Date(ev.time_iso).toISOString() : new Date().toISOString(),
+              location: ev.location || '',
+              description: ev.description || '',
+              status_code: ev.stage || statusStr,
             }))
           );
 

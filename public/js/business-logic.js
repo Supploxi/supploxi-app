@@ -46,9 +46,9 @@ window.calcReorderAlert = (product) => {
 }
 
 // ---- Auto Tracking Status Mapping ----
-// Handles both numeric codes (track.e) and string tags (track.w1)
+// Maps 17Track v2.2 track_info.latest_status.status strings to Supploxi statuses
 window.map17TrackStatus = (codeOrTag, tag) => {
-  // Numeric status codes (17Track v2.2 track.e field)
+  // Numeric status codes (legacy fallback)
   const numericMap = {
     0: 'processing',      // NotFound
     10: 'in_transit',     // InTransit
@@ -62,7 +62,7 @@ window.map17TrackStatus = (codeOrTag, tag) => {
     return numericMap[codeOrTag]
   }
 
-  // String status tags (track.w1 or legacy z0.z)
+  // String status tags (track_info.latest_status.status)
   const stringMap = {
     NotFound: 'processing',
     InTransit: 'in_transit',
