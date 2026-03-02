@@ -195,17 +195,20 @@
   <script>
     let products = []
     let suppliers = []
+    let userSettings = {}
     let deleteId = null
 
     async function load() {
       const user = await window.requireAuth()
       await window.initLayout({ page: 'products', title: 'Products' })
-      const [{ data: p }, { data: s }] = await Promise.all([
+      const [{ data: p }, { data: s }, { data: us }] = await Promise.all([
         window._sb.from('products').select('*, suppliers(company_name)').eq('user_id', user.id).order('created_at', { ascending: false }),
-        window._sb.from('suppliers').select('id,company_name,lead_time_days').eq('user_id', user.id).eq('status','active')
+        window._sb.from('suppliers').select('id,company_name,lead_time_days').eq('user_id', user.id).eq('status','active'),
+        window._sb.from('user_settings').select('*').eq('user_id', user.id).single()
       ])
       products = p || []
       suppliers = s || []
+      userSettings = us || {}
       const sel = document.getElementById('f-supplier')
       sel.innerHTML = '<option value="">No supplier</option>' + suppliers.map(s => `<option value="${s.id}">${window.escapeHtml(s.company_name)}</option>`).join('')
       updateStats()
@@ -252,7 +255,7 @@
               const margin = p.margin_percent || 0
               const marginColor = margin >= 40 ? 'var(--green)' : margin >= 20 ? 'var(--orange)' : 'var(--red)'
               const supplierInfo = suppliers.find(s => s.id === p.primary_supplier_id)
-              const alert = window.calcReorderAlert({ ...p, lead_time_days: supplierInfo?.lead_time_days || 30 })
+              const alert = window.calcReorderAlert({ ...p, lead_time_days: supplierInfo?.lead_time_days || 30 }, userSettings)
               const alertBadge = alert.urgency === 'critical' ? '<span class="badge badge-red">CRITICAL</span>' : alert.urgency === 'soon' ? '<span class="badge badge-orange">SOON</span>' : alert.urgency === 'monitor' ? '<span class="badge badge-blue">MONITOR</span>' : '<span class="badge badge-green">OK</span>'
               return `<tr>
                 <td>

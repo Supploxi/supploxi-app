@@ -187,13 +187,16 @@
         { data: suppliers },
         { data: shipments },
         { data: products },
-        { data: orders }
+        { data: orders },
+        { data: userSettings }
       ] = await Promise.all([
         window._sb.from('suppliers').select('*').eq('user_id', user.id),
         window._sb.from('shipments').select('*, suppliers(company_name)').eq('user_id', user.id).neq('status', 'delivered'),
         window._sb.from('products').select('*, suppliers(company_name, lead_time_days)').eq('user_id', user.id),
-        window._sb.from('purchase_orders').select('*').eq('user_id', user.id).not('status', 'in', '("received","cancelled")')
+        window._sb.from('purchase_orders').select('*').eq('user_id', user.id).not('status', 'in', '("received","cancelled")'),
+        window._sb.from('user_settings').select('*').eq('user_id', user.id).single()
       ])
+      const settings = userSettings || {}
 
       // --- STAT CARDS ---
       const activeSuppliers = suppliers?.filter(s => s.status === 'active').length || 0
@@ -208,21 +211,22 @@
       document.getElementById('stat-shipments').textContent = shipments?.length || 0
       document.getElementById('stat-shipments-sub').textContent = arrivingSoon + ' arriving this week'
 
-      // Low stock alerts
-      const alerts = products?.map(p => {
+      // Low stock alerts (respects user settings)
+      const aiEnabled = settings.ai_reorder_enabled !== false
+      const alerts = aiEnabled ? (products?.map(p => {
         const supplier = p.suppliers
         const result = window.calcReorderAlert({
           ...p,
           lead_time_days: supplier?.lead_time_days || 30
-        })
+        }, settings)
         return { ...p, alert: result }
-      }).filter(p => p.alert.urgency !== 'ok') || []
+      }).filter(p => p.alert.urgency !== 'ok') || []) : []
 
       const criticalCount = alerts.filter(p => p.alert.urgency === 'critical').length
-      document.getElementById('stat-lowstock').textContent = alerts.length
+      document.getElementById('stat-lowstock').textContent = aiEnabled ? alerts.length : '--'
       const lowStockSub = document.getElementById('stat-lowstock-sub')
-      lowStockSub.textContent = criticalCount > 0 ? criticalCount + ' critical' : 'All levels OK'
-      lowStockSub.className = criticalCount > 0 ? 'stat-sub red' : 'stat-sub green'
+      lowStockSub.textContent = !aiEnabled ? 'AI Reorder disabled' : criticalCount > 0 ? criticalCount + ' critical' : 'All levels OK'
+      lowStockSub.className = !aiEnabled ? 'stat-sub' : criticalCount > 0 ? 'stat-sub red' : 'stat-sub green'
 
       const ordersTotal = orders?.reduce((sum, o) => sum + (o.total_value || 0), 0) || 0
       document.getElementById('stat-orders').textContent = orders?.length || 0
@@ -251,7 +255,14 @@
       }
 
       // --- AI REORDER ALERTS ---
-      if (alerts.length > 0) {
+      if (!aiEnabled) {
+        document.getElementById('reorder-alerts').innerHTML = `
+          <div class="empty-state" style="padding:30px">
+            <div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="10" height="10" rx="2"/><rect x="18" y="4" width="10" height="10" rx="2"/><rect x="4" y="18" width="10" height="10" rx="2"/><rect x="18" y="18" width="10" height="10" rx="2"/></svg></div>
+            <h3>AI Reorder Engine disabled</h3>
+            <p>Enable it in <a href="/settings.html" style="color:var(--green)">Settings &rarr; Preferences</a></p>
+          </div>`
+      } else if (alerts.length > 0) {
         document.getElementById('reorder-alerts').innerHTML = alerts.slice(0, 5).map(p => `
           <div class="reorder-card ${p.alert.urgency}" onclick="window.location.href='/products.html'">
             <div style="flex:1">

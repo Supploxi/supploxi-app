@@ -15,12 +15,15 @@ window.calcMargin = (selling, landed) => {
 }
 
 // ---- Reorder Alert Calculation ----
-window.calcReorderAlert = (product) => {
+// Accepts optional settings from user_settings table:
+//   customs_buffer_days, safety_stock_days, include_customs_buffer
+window.calcReorderAlert = (product, settings) => {
+  const s = settings || {}
   const stock = parseInt(product.stock_quantity) || 0
   const avgDaily = parseFloat(product.avg_daily_sales) || 1
   const leadTime = parseInt(product.lead_time_days) || 30
-  const customsBuffer = 15
-  const safetyBuffer = 7
+  const customsBuffer = (s.include_customs_buffer !== false) ? (parseInt(s.customs_buffer_days) || 15) : 0
+  const safetyBuffer = parseInt(s.safety_stock_days) || 7
   const totalLeadTime = leadTime + customsBuffer + safetyBuffer
   const daysLeft = stock / avgDaily
   const suggestedQty = Math.ceil(avgDaily * totalLeadTime * 1.3)
