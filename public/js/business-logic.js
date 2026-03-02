@@ -45,7 +45,7 @@ window.calcReorderAlert = (product) => {
   }
 }
 
-// ---- 17Track Status Mapping ----
+// ---- Auto Tracking Status Mapping ----
 window.map17TrackStatus = (tag) => {
   const map = {
     NotFound: 'processing',

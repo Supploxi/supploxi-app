@@ -28,10 +28,10 @@
     <div class="page-content">
 
       <div class="tabs">
-        <div class="tab active" onclick="switchTab('profile',this)">👤 Profile</div>
-        <div class="tab" onclick="switchTab('notifications',this)">🔔 Notifications</div>
-        <div class="tab" onclick="switchTab('preferences',this)">⚙️ Preferences</div>
-        <div class="tab" onclick="switchTab('billing',this)">💳 Billing</div>
+        <div class="tab active" onclick="switchTab('profile',this)">Profile</div>
+        <div class="tab" onclick="switchTab('notifications',this)">Notifications</div>
+        <div class="tab" onclick="switchTab('preferences',this)">Preferences</div>
+        <div class="tab" onclick="switchTab('billing',this)">Billing</div>
       </div>
 
       <div id="tab-content" class="card">
@@ -121,7 +121,7 @@
           </div>
 
           <div class="danger-zone">
-            <h3 style="font-size:15px;font-weight:600;color:var(--red);margin-bottom:8px">⚠️ Danger Zone</h3>
+            <h3 style="font-size:15px;font-weight:600;color:var(--red);margin-bottom:8px">Danger Zone</h3>
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Once you delete your account, all data will be permanently removed. This action cannot be undone.</p>
             <button class="btn btn-danger" onclick="confirmDeleteAccount()">Delete My Account</button>
           </div>`
@@ -174,9 +174,9 @@
               <div class="form-group">
                 <label class="form-label">Default Shipping Country Origin</label>
                 <select id="pref-origin" class="form-select">
-                  <option value="CN" ${(settings.default_origin||'CN')==='CN'?'selected':''}>🇨🇳 China</option>
-                  <option value="IN" ${settings.default_origin==='IN'?'selected':''}>🇮🇳 India</option>
-                  <option value="VN" ${settings.default_origin==='VN'?'selected':''}>🇻🇳 Vietnam</option>
+                  <option value="CN" ${(settings.default_origin||'CN')==='CN'?'selected':''}>China</option>
+                  <option value="IN" ${settings.default_origin==='IN'?'selected':''}>India</option>
+                  <option value="VN" ${settings.default_origin==='VN'?'selected':''}>Vietnam</option>
                 </select>
               </div>
               <div class="form-group">

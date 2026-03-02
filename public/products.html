@@ -47,7 +47,7 @@
           <button class="btn btn-primary" onclick="openModal()">+ Add Product</button>
         </div>
         <div id="table-body">
-          <div class="empty-state"><div class="empty-state-icon">📦</div><h3>No products yet</h3><p>Add your first product to start tracking inventory and margins</p><button class="btn btn-primary" onclick="openModal()">+ Add Product</button></div>
+          <div class="empty-state"><div class="empty-state-icon">--</div><h3>No products yet</h3><p>Add your first product to start tracking inventory and margins</p><button class="btn btn-primary" onclick="openModal()">+ Add Product</button></div>
         </div>
       </div>
     </div>
@@ -107,7 +107,7 @@
         </div>
 
         <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
-          <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px">💰 Pricing & Margins</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px">Pricing & Margins</div>
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Selling Price (USD) <span class="required">*</span></label>
@@ -137,7 +137,7 @@
         </div>
 
         <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
-          <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px">📦 Inventory & Reorder</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px">Inventory & Reorder</div>
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Current Stock (units)</label>
@@ -235,7 +235,7 @@
         return true
       })
       if (!list.length) {
-        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No products found</h3><p>Try adjusting your filters</p></div>`
+        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No products found</h3><p>Try adjusting your filters</p></div>`
         return
       }
       document.getElementById('table-body').innerHTML = `
@@ -270,8 +270,8 @@
                 <td>${alertBadge}</td>
                 <td onclick="event.stopPropagation()">
                   <div class="action-btns">
-                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editProduct('${p.id}')" title="Edit">✏️</button>
-                    <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${p.id}','${window.escapeHtml(p.name)}')" title="Delete">🗑️</button>
+                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editProduct('${p.id}')" title="Edit">Edit</button>
+                    <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${p.id}','${window.escapeHtml(p.name)}')" title="Delete">Del</button>
                   </div>
                 </td>
               </tr>`

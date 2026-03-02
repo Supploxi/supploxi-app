@@ -52,7 +52,7 @@
           <button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button>
         </div>
         <div id="table-body">
-          <div class="empty-state"><div class="empty-state-icon">🏭</div><h3>No suppliers yet</h3><p>Add your first supplier to get started</p><button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button></div>
+          <div class="empty-state"><div class="empty-state-icon">--</div><h3>No suppliers yet</h3><p>Add your first supplier to get started</p><button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button></div>
         </div>
       </div>
     </div>
@@ -87,16 +87,16 @@
           <div class="form-group">
             <label class="form-label">Country</label>
             <select id="f-country" class="form-select">
-              <option value="China">🇨🇳 China</option>
-              <option value="India">🇮🇳 India</option>
-              <option value="Vietnam">🇻🇳 Vietnam</option>
-              <option value="Bangladesh">🇧🇩 Bangladesh</option>
-              <option value="Turkey">🇹🇷 Turkey</option>
-              <option value="Pakistan">🇵🇰 Pakistan</option>
-              <option value="Mexico">🇲🇽 Mexico</option>
-              <option value="Thailand">🇹🇭 Thailand</option>
-              <option value="Indonesia">🇮🇩 Indonesia</option>
-              <option value="Other">🌐 Other</option>
+              <option value="China">China</option>
+              <option value="India">India</option>
+              <option value="Vietnam">Vietnam</option>
+              <option value="Bangladesh">Bangladesh</option>
+              <option value="Turkey">Turkey</option>
+              <option value="Pakistan">Pakistan</option>
+              <option value="Mexico">Mexico</option>
+              <option value="Thailand">Thailand</option>
+              <option value="Indonesia">Indonesia</option>
+              <option value="Other">Other</option>
             </select>
           </div>
           <div class="form-group">
@@ -184,7 +184,7 @@
       </div>
       <div class="modal-body">
         <p style="color:var(--text-muted)">Are you sure you want to delete <strong id="delete-name"></strong>? This action cannot be undone.</p>
-        <p style="color:var(--red);font-size:13px;margin-top:8px">⚠️ This will also delete all associated purchase orders and shipments.</p>
+        <p style="color:var(--red);font-size:13px;margin-top:8px">Warning: This will also delete all associated purchase orders and shipments.</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
@@ -234,7 +234,7 @@
         return true
       })
       if (!list.length) {
-        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No suppliers found</h3><p>Try adjusting your filters</p></div>`
+        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No suppliers found</h3><p>Try adjusting your filters</p></div>`
         return
       }
       document.getElementById('table-body').innerHTML = `
@@ -273,8 +273,8 @@
                 <td>${window.getStatusBadge(s.status||'active')}</td>
                 <td onclick="event.stopPropagation()">
                   <div class="action-btns">
-                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editSupplier('${s.id}')" title="Edit">✏️</button>
-                    <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${s.id}','${window.escapeHtml(s.company_name)}')" title="Delete">🗑️</button>
+                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editSupplier('${s.id}')" title="Edit">Edit</button>
+                    <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${s.id}','${window.escapeHtml(s.company_name)}')" title="Delete">Del</button>
                   </div>
                 </td>
               </tr>`

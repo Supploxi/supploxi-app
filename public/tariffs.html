@@ -27,7 +27,7 @@
 
       <!-- BANNER -->
       <div style="background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(245,158,11,0.1));border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius);padding:20px;margin-bottom:24px;display:flex;gap:16px;align-items:flex-start">
-        <div style="font-size:28px">⚠️</div>
+        <div style="font-size:16px;font-weight:700;color:var(--red)">!</div>
         <div>
           <div style="font-weight:700;font-size:16px;margin-bottom:4px">Section 301 Tariffs — 2025/2026 Alert</div>
           <p style="font-size:13px;color:var(--text-muted);line-height:1.6">US tariffs on Chinese goods under Section 301 can significantly impact your landed costs. Track your HTS codes here to get instant alerts when rates change. Currently, tariffs on most Chinese goods range from 7.5% to 145% depending on product category.</p>
@@ -50,7 +50,7 @@
           </div>
           <div id="tariff-list">
             <div class="empty-state">
-              <div class="empty-state-icon">🔍</div>
+              <div class="empty-state-icon">--</div>
               <h3>No HTS codes tracked</h3>
               <p>Add your product HTS codes to monitor tariff changes automatically</p>
               <button class="btn btn-primary" onclick="openAddModal()">+ Add HTS Code</button>
@@ -61,7 +61,7 @@
         <!-- SIDEBAR: INFO + QUICK CALC -->
         <div>
           <div class="card" style="margin-bottom:16px">
-            <div class="card-title" style="margin-bottom:16px">🧮 Tariff Impact Calculator</div>
+            <div class="card-title" style="margin-bottom:16px">Tariff Impact Calculator</div>
             <div class="form-group">
               <label class="form-label">Order Value (USD)</label>
               <input type="number" id="calc-value" class="form-input" placeholder="10000" oninput="calcImpact()">
@@ -87,25 +87,40 @@
           </div>
 
           <div class="card">
-            <div class="card-title" style="margin-bottom:12px">📚 Common HTS Codes</div>
+            <div class="card-title" style="margin-bottom:12px">Common HTS Codes</div>
             <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
-              ${[
-                ['6110.20.2079', 'Cotton knit sweaters', '27.5%'],
-                ['8517.12.0050', 'Smartphones', '20%'],
-                ['9403.20.0018', 'Metal furniture', '25%'],
-                ['9506.91.0030', 'Sports equipment', '25%'],
-                ['8471.30.0100', 'Laptops & tablets', '7.5%'],
-                ['6204.62.4011', 'Women\'s cotton pants', '14.9%'],
-                ['9401.61.4031', 'Upholstered chairs', '25%'],
-                ['7321.11.6000', 'Gas cooking stoves', '25%'],
-              ].map(([code, desc, rate]) => `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('${code}','${desc}','${rate}')">
-                  <div>
-                    <div style="font-family:monospace;font-weight:600">${code}</div>
-                    <div style="color:var(--text-muted)">${desc}</div>
-                  </div>
-                  <span style="color:var(--orange);font-weight:600">${rate}</span>
-                </div>`).join('')}
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('6110.20.2079','Cotton knit sweaters','27.5%')">
+                <div><div style="font-family:monospace;font-weight:600">6110.20.2079</div><div style="color:var(--text-muted)">Cotton knit sweaters</div></div>
+                <span style="color:var(--orange);font-weight:600">27.5%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('8517.12.0050','Smartphones','20%')">
+                <div><div style="font-family:monospace;font-weight:600">8517.12.0050</div><div style="color:var(--text-muted)">Smartphones</div></div>
+                <span style="color:var(--orange);font-weight:600">20%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('9403.20.0018','Metal furniture','25%')">
+                <div><div style="font-family:monospace;font-weight:600">9403.20.0018</div><div style="color:var(--text-muted)">Metal furniture</div></div>
+                <span style="color:var(--orange);font-weight:600">25%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('9506.91.0030','Sports equipment','25%')">
+                <div><div style="font-family:monospace;font-weight:600">9506.91.0030</div><div style="color:var(--text-muted)">Sports equipment</div></div>
+                <span style="color:var(--orange);font-weight:600">25%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('8471.30.0100','Laptops &amp; tablets','7.5%')">
+                <div><div style="font-family:monospace;font-weight:600">8471.30.0100</div><div style="color:var(--text-muted)">Laptops &amp; tablets</div></div>
+                <span style="color:var(--orange);font-weight:600">7.5%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('6204.62.4011','Women&#39;s cotton pants','14.9%')">
+                <div><div style="font-family:monospace;font-weight:600">6204.62.4011</div><div style="color:var(--text-muted)">Women's cotton pants</div></div>
+                <span style="color:var(--orange);font-weight:600">14.9%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('9401.61.4031','Upholstered chairs','25%')">
+                <div><div style="font-family:monospace;font-weight:600">9401.61.4031</div><div style="color:var(--text-muted)">Upholstered chairs</div></div>
+                <span style="color:var(--orange);font-weight:600">25%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''" onclick="prefillHTS('7321.11.6000','Gas cooking stoves','25%')">
+                <div><div style="font-family:monospace;font-weight:600">7321.11.6000</div><div style="color:var(--text-muted)">Gas cooking stoves</div></div>
+                <span style="color:var(--orange);font-weight:600">25%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -209,7 +224,7 @@
       if (!watches.length) {
         document.getElementById('tariff-list').innerHTML = `
           <div class="empty-state">
-            <div class="empty-state-icon">🔍</div>
+            <div class="empty-state-icon">--</div>
             <h3>No HTS codes tracked</h3>
             <p>Add your product HTS codes to monitor tariff changes automatically</p>
             <button class="btn btn-primary" onclick="openAddModal()">+ Add HTS Code</button>
@@ -230,7 +245,7 @@
                 <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">
                   <span class="hts-code">${window.escapeHtml(w.hts_code)}</span>
                   ${changed ? `<span class="rate-change ${direction}">${direction==='up'?'▲ Rate Increased':'▼ Rate Decreased'}</span>` : ''}
-                  ${w.alert_on_change ? '<span style="font-size:11px;color:var(--green);background:var(--green-dim);padding:2px 8px;border-radius:20px">🔔 Alerts ON</span>' : ''}
+                  ${w.alert_on_change ? '<span style="font-size:11px;color:var(--green);background:var(--green-dim);padding:2px 8px;border-radius:20px">Alerts ON</span>' : ''}
                 </div>
                 <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
                   ${window.escapeHtml(w.description||'No description')}
@@ -260,7 +275,7 @@
                   </div>` : ''}
               </div>
               <div class="action-btns" style="flex-shrink:0">
-                <button class="btn btn-sm btn-secondary btn-icon" onclick="deleteWatch('${w.id}')" title="Remove">🗑️</button>
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="deleteWatch('${w.id}')" title="Remove">Del</button>
               </div>
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin-top:12px;border-top:1px solid var(--border);padding-top:8px">

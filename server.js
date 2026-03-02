@@ -24,7 +24,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date(), version: '2.0' });
 });
 
-// Register tracking number on 17Track
+// Register tracking number for auto-tracking
 app.post('/api/tracking/register', async (req, res) => {
   try {
     const { tracking_number, carrier_code } = req.body;
@@ -47,12 +47,12 @@ app.post('/api/tracking/register', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (err) {
-    console.error('[17Track Register]', err.message);
+    console.error('[AutoTracking Register]', err.message);
     res.status(500).json({ error: 'Failed to register tracking', details: err.message });
   }
 });
 
-// Get tracking info from 17Track
+// Get tracking info
 app.post('/api/tracking/getinfo', async (req, res) => {
   try {
     const { numbers } = req.body;
@@ -75,7 +75,7 @@ app.post('/api/tracking/getinfo', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (err) {
-    console.error('[17Track GetInfo]', err.message);
+    console.error('[AutoTracking GetInfo]', err.message);
     res.status(500).json({ error: 'Failed to get tracking info', details: err.message });
   }
 });
@@ -90,5 +90,5 @@ app.get('/', (req, res) => {
 // =============================================
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Supploxi v2 running at http://localhost:${PORT}`);
-  console.log('17Track integration: ENABLED');
+  console.log('Auto-tracking integration: ENABLED');
 });

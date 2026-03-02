@@ -204,7 +204,7 @@
                       <td style="color:${it.quantity_received>=it.quantity?'var(--green)':'var(--text-muted)'}">${it.quantity_received||0}</td>
                       <td>${window.formatCurrency(it.unit_price)}</td>
                       <td><strong>${window.formatCurrency(it.total_price||it.quantity*it.unit_price)}</strong></td>
-                      <td><button class="btn btn-sm btn-danger btn-icon" onclick="deleteItem('${it.id}')">🗑️</button></td>
+                      <td><button class="btn btn-sm btn-danger btn-icon" onclick="deleteItem('${it.id}')">Del</button></td>
                     </tr>`).join('')}
                     <tr style="background:rgba(0,0,0,0.2)">
                       <td colspan="5" style="text-align:right;font-weight:600;padding:14px 16px">Total</td>

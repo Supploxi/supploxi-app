@@ -34,11 +34,11 @@
     let shipment = null
 
     const PROGRESS_STEPS = [
-      { key: 'processing', icon: '📦', label: 'Processed' },
-      { key: 'in_transit', icon: '✈️', label: 'In Transit' },
-      { key: 'customs', icon: '🛃', label: 'Customs' },
-      { key: 'out_for_delivery', icon: '🚚', label: 'Out for Delivery' },
-      { key: 'delivered', icon: '✅', label: 'Delivered' }
+      { key: 'processing', icon: '1', label: 'Processed' },
+      { key: 'in_transit', icon: '2', label: 'In Transit' },
+      { key: 'customs', icon: '3', label: 'Customs' },
+      { key: 'out_for_delivery', icon: '4', label: 'Out for Delivery' },
+      { key: 'delivered', icon: '5', label: 'Delivered' }
     ]
 
     async function load() {
@@ -84,7 +84,7 @@
           <div style="flex:1">
             <div style="font-size:13px;font-weight:${i===0?'600':'400'}">${window.escapeHtml(ev.description||'Status update')}</div>
             <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
-              ${ev.location ? `📍 ${window.escapeHtml(ev.location)} · ` : ''}
+              ${ev.location ? `${window.escapeHtml(ev.location)} · ` : ''}
               ${ev.event_time ? new Date(ev.event_time).toLocaleString('en-US') : ''}
             </div>
           </div>
@@ -105,7 +105,7 @@
           </div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-secondary" onclick="window.location.href='/shipments.html'">← Back</button>
-            <button class="btn btn-secondary" onclick="refreshTracking()" id="refresh-btn">🔄 Refresh Tracking</button>
+            <button class="btn btn-secondary" onclick="refreshTracking()" id="refresh-btn">Refresh Tracking</button>
           </div>
         </div>
 
@@ -126,8 +126,8 @@
           <!-- TIMELINE -->
           <div class="card">
             <div class="card-header">
-              <span class="card-title">📍 Tracking Timeline</span>
-              <span style="font-size:12px;color:var(--green)">🤖 Auto-updates every 6h</span>
+              <span class="card-title">Tracking Timeline</span>
+              <span style="font-size:12px;color:var(--green)">Auto-updates every 6h</span>
             </div>
             <div class="tracking-timeline">${timelineHtml}</div>
           </div>
@@ -136,7 +136,7 @@
           <div>
             <!-- COSTS -->
             <div class="card" style="margin-bottom:16px">
-              <div class="card-title" style="margin-bottom:16px">💰 Cost Breakdown</div>
+              <div class="card-title" style="margin-bottom:16px">Cost Breakdown</div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
                 <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Shipping</span><strong>${window.formatCurrency(s.shipping_cost||0)}</strong></div>
                 <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Insurance</span><strong>${window.formatCurrency(s.insurance_cost||0)}</strong></div>
@@ -144,7 +144,7 @@
                 <div style="height:1px;background:var(--border);margin:4px 0"></div>
                 <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Total</span><strong style="color:var(--green)">${window.formatCurrency(totalCost)}</strong></div>
               </div>
-              ${s.customs_status ? `<div style="margin-top:12px;padding:8px;background:var(--orange-dim);border-radius:var(--radius-sm);font-size:12px;color:var(--orange)">🛃 Customs: ${window.escapeHtml(s.customs_status)}</div>` : ''}
+              ${s.customs_status ? `<div style="margin-top:12px;padding:8px;background:var(--orange-dim);border-radius:var(--radius-sm);font-size:12px;color:var(--orange)">Customs: ${window.escapeHtml(s.customs_status)}</div>` : ''}
             </div>
 
             <!-- DETAILS -->
@@ -165,7 +165,7 @@
 
     async function refreshTracking() {
       const btn = document.getElementById('refresh-btn')
-      btn.textContent = '⏳ Refreshing...'
+      btn.textContent = 'Refreshing...'
       btn.disabled = true
       try {
         const res = await fetch('/api/tracking/getinfo', {
@@ -205,12 +205,12 @@
             window.showToast('No new events yet. Try again later.', 'info')
           }
         } else {
-          window.showToast('Tracking number not found in 17Track yet.', 'warning')
+          window.showToast('Tracking number not found yet. Try again later.', 'warning')
         }
       } catch(e) {
         window.showToast('Error refreshing: ' + e.message, 'error')
       }
-      btn.textContent = '🔄 Refresh Tracking'
+      btn.textContent = 'Refresh Tracking'
       btn.disabled = false
       await load()
     }

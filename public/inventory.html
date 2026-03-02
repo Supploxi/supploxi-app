@@ -17,9 +17,9 @@
     <div class="page-content">
 
       <div class="tabs" id="main-tabs">
-        <div class="tab active" onclick="switchView('stock',this)">📦 Stock Levels</div>
-        <div class="tab" onclick="switchView('movements',this)">🔄 Movements History</div>
-        <div class="tab" onclick="switchView('valuation',this)">💰 Valuation</div>
+        <div class="tab active" onclick="switchView('stock',this)">Stock Levels</div>
+        <div class="tab" onclick="switchView('movements',this)">Movements History</div>
+        <div class="tab" onclick="switchView('valuation',this)">Valuation</div>
       </div>
 
       <!-- STOCK VIEW -->
@@ -103,11 +103,11 @@
         <div class="form-group">
           <label class="form-label">Movement Type <span class="required">*</span></label>
           <select id="adj-type" class="form-select">
-            <option value="in">📥 Stock In (received goods)</option>
-            <option value="out">📤 Stock Out (sold / used)</option>
-            <option value="adjustment">± Manual Adjustment</option>
-            <option value="return">↩️ Return from customer</option>
-            <option value="damaged">⚠️ Damaged / Loss</option>
+            <option value="in">Stock In (received goods)</option>
+            <option value="out">Stock Out (sold / used)</option>
+            <option value="adjustment">Manual Adjustment</option>
+            <option value="return">Return from customer</option>
+            <option value="damaged">Damaged / Loss</option>
           </select>
         </div>
         <div class="form-grid">
@@ -192,7 +192,7 @@
       document.getElementById('s-out').textContent = out
 
       if (!list.length) {
-        document.getElementById('stock-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div><h3>No products found</h3></div>'
+        document.getElementById('stock-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon">--</div><h3>No products found</h3></div>'
         return
       }
 
@@ -238,16 +238,16 @@
       })
 
       if (!list.length) {
-        document.getElementById('movements-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔄</div><h3>No movements yet</h3><p>Stock movements will appear here when you adjust inventory</p></div>'
+        document.getElementById('movements-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon">--</div><h3>No movements yet</h3><p>Stock movements will appear here when you adjust inventory</p></div>'
         return
       }
 
       const typeConfig = {
-        in: { icon: '📥', color: 'var(--green)', label: 'Stock In' },
-        out: { icon: '📤', color: 'var(--red)', label: 'Stock Out' },
+        in: { icon: '+', color: 'var(--green)', label: 'Stock In' },
+        out: { icon: '-', color: 'var(--red)', label: 'Stock Out' },
         adjustment: { icon: '±', color: 'var(--blue)', label: 'Adjustment' },
-        return: { icon: '↩️', color: 'var(--purple)', label: 'Return' },
-        damaged: { icon: '⚠️', color: 'var(--orange)', label: 'Damaged' }
+        return: { icon: '←', color: 'var(--purple)', label: 'Return' },
+        damaged: { icon: '!', color: 'var(--orange)', label: 'Damaged' }
       }
 
       document.getElementById('movements-table').innerHTML = `

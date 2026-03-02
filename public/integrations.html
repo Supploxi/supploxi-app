@@ -33,7 +33,7 @@
       <div class="integration-card" id="card-shopify">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
           <div style="display:flex;gap:16px;align-items:flex-start">
-            <div class="platform-logo">🛍️</div>
+            <div class="platform-logo" style="font-size:18px;font-weight:700;color:var(--green)">S</div>
             <div>
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
                 <h3 style="font-size:18px;font-weight:700">Shopify</h3>
@@ -73,7 +73,11 @@
               <div style="font-weight:600;margin-bottom:4px">Set API Permissions</div>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">In API credentials → Configure Admin API scopes, enable:</p>
               <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-                ${['read_products','write_products','read_inventory','write_inventory','read_orders'].map(p => `<code style="background:var(--bg-primary);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-size:12px;color:var(--green)">${p}</code>`).join('')}
+                <code style="background:var(--bg-primary);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-size:12px;color:var(--green)">read_products</code>
+                <code style="background:var(--bg-primary);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-size:12px;color:var(--green)">write_products</code>
+                <code style="background:var(--bg-primary);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-size:12px;color:var(--green)">read_inventory</code>
+                <code style="background:var(--bg-primary);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-size:12px;color:var(--green)">write_inventory</code>
+                <code style="background:var(--bg-primary);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-size:12px;color:var(--green)">read_orders</code>
               </div>
             </div>
           </div>
@@ -108,7 +112,7 @@
       <div class="integration-card" id="card-woocommerce">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
           <div style="display:flex;gap:16px;align-items:flex-start">
-            <div class="platform-logo">🔷</div>
+            <div class="platform-logo" style="font-size:18px;font-weight:700;color:var(--blue)">W</div>
             <div>
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
                 <h3 style="font-size:18px;font-weight:700">WooCommerce</h3>
@@ -145,7 +149,7 @@
             <div class="step-num">3</div>
             <div class="step-content">
               <div style="font-weight:600;margin-bottom:4px">Copy Consumer Key and Consumer Secret</div>
-              <p style="font-size:13px;color:var(--text-muted)">⚠️ These keys are shown only once. Copy them immediately after creation.</p>
+              <p style="font-size:13px;color:var(--text-muted)">Important: These keys are shown only once. Copy them immediately after creation.</p>
             </div>
           </div>
 
@@ -175,7 +179,7 @@
       <div class="integration-card" id="card-bigcommerce">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
           <div style="display:flex;gap:16px;align-items:flex-start">
-            <div class="platform-logo">🏬</div>
+            <div class="platform-logo" style="font-size:18px;font-weight:700;color:var(--orange)">B</div>
             <div>
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
                 <h3 style="font-size:18px;font-weight:700">BigCommerce</h3>
@@ -226,19 +230,19 @@
         </div>
       </div>
 
-      <!-- 17TRACK STATUS -->
+      <!-- AUTO TRACKING STATUS -->
       <div class="integration-card connected">
         <div style="display:flex;align-items:center;gap:16px">
-          <div class="platform-logo">🤖</div>
+          <div class="platform-logo" style="font-size:18px;font-weight:700;color:var(--green)">AT</div>
           <div style="flex:1">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-              <h3 style="font-size:18px;font-weight:700">17Track Auto-Tracking</h3>
+              <h3 style="font-size:18px;font-weight:700">Auto Tracking</h3>
               <span class="status-connected">Active</span>
             </div>
             <p style="color:var(--text-muted);font-size:13px">Automatic shipment tracking is active. All shipments are synced every 6 hours. No action required.</p>
           </div>
           <div>
-            <button class="btn btn-secondary" disabled>✅ Connected</button>
+            <button class="btn btn-secondary" disabled>Connected</button>
           </div>
         </div>
       </div>

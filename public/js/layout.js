@@ -17,17 +17,17 @@ window.initLayout = async (config = {}) => {
 
   // Navigation items grouped by section
   const navItems = [
-    { id: 'dashboard', icon: '\u229E', label: 'Dashboard', href: '/dashboard.html', section: 'MENU' },
-    { id: 'suppliers', icon: '\uD83C\uDFED', label: 'Suppliers', href: '/suppliers.html', section: 'MENU' },
-    { id: 'purchase-orders', icon: '\uD83D\uDCCB', label: 'Purchase Orders', href: '/purchase-orders.html', section: 'MENU' },
-    { id: 'shipments', icon: '\u2708\uFE0F', label: 'Shipments', href: '/shipments.html', section: 'MENU' },
-    { id: 'products', icon: '\uD83D\uDCE6', label: 'Products', href: '/products.html', section: 'MENU' },
-    { id: 'inventory', icon: '\uD83D\uDDC3\uFE0F', label: 'Inventory', href: '/inventory.html', section: 'MENU' },
-    { id: 'financials', icon: '\uD83D\uDCB0', label: 'Financials', href: '/financials.html', section: 'FINANCE' },
-    { id: 'tariffs', icon: '\uD83C\uDFDB\uFE0F', label: 'Tariff Tracker', href: '/tariffs.html', section: 'FINANCE' },
-    { id: 'reports', icon: '\uD83D\uDCCA', label: 'Reports', href: '/reports.html', section: 'FINANCE' },
-    { id: 'integrations', icon: '\uD83D\uDD17', label: 'Integrations', href: '/integrations.html', section: 'SETTINGS' },
-    { id: 'settings', icon: '\u2699\uFE0F', label: 'Settings', href: '/settings.html', section: 'SETTINGS' },
+    { id: 'dashboard', label: 'Dashboard', href: '/dashboard.html', section: 'MENU' },
+    { id: 'suppliers', label: 'Suppliers', href: '/suppliers.html', section: 'MENU' },
+    { id: 'purchase-orders', label: 'Purchase Orders', href: '/purchase-orders.html', section: 'MENU' },
+    { id: 'shipments', label: 'Shipments', href: '/shipments.html', section: 'MENU' },
+    { id: 'products', label: 'Products', href: '/products.html', section: 'MENU' },
+    { id: 'inventory', label: 'Inventory', href: '/inventory.html', section: 'MENU' },
+    { id: 'financials', label: 'Financials', href: '/financials.html', section: 'FINANCE' },
+    { id: 'tariffs', label: 'Tariff Tracker', href: '/tariffs.html', section: 'FINANCE' },
+    { id: 'reports', label: 'Reports', href: '/reports.html', section: 'FINANCE' },
+    { id: 'integrations', label: 'Integrations', href: '/integrations.html', section: 'SETTINGS' },
+    { id: 'settings', label: 'Settings', href: '/settings.html', section: 'SETTINGS' },
   ]
 
   // Group items by section
@@ -43,7 +43,6 @@ window.initLayout = async (config = {}) => {
     navHtml += `<div class="nav-section-title">${section}</div>`
     items.forEach(item => {
       navHtml += `<a href="${item.href}" class="nav-item ${page === item.id ? 'active' : ''}">
-        <span>${item.icon}</span>
         <span>${item.label}</span>
       </a>`
     })
@@ -78,7 +77,7 @@ window.initLayout = async (config = {}) => {
       <span class="navbar-title">${window.escapeHtml(title)}</span>
       <div class="navbar-actions">
         <div class="notification-btn" onclick="window.showToast('Notifications coming soon','info')" title="Notifications">
-          \uD83D\uDD14
+          Notifications
           ${notifBadge}
         </div>
         <div style="width:32px;height:32px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#0a0c14;cursor:pointer">${initials}</div>

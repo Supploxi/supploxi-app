@@ -128,7 +128,7 @@
                 </tr>`).join('')}
               </tbody>
             </table>
-          </div>` : `<div class="empty-state"><div class="empty-state-icon">📦</div><h3>No products</h3><p>No products linked to this supplier yet</p><a href="/products.html" class="btn btn-primary">Add Product</a></div>`
+          </div>` : `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No products</h3><p>No products linked to this supplier yet</p><a href="/products.html" class="btn btn-primary">Add Product</a></div>`
       }
 
       if (tab === 'orders') {
@@ -148,7 +148,7 @@
                 </tr>`).join('')}
               </tbody>
             </table>
-          </div>` : `<div class="empty-state"><div class="empty-state-icon">📋</div><h3>No orders</h3><p>No purchase orders with this supplier yet</p><a href="/purchase-orders.html?supplier=${id}" class="btn btn-primary">Create PO</a></div>`
+          </div>` : `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No orders</h3><p>No purchase orders with this supplier yet</p><a href="/purchase-orders.html?supplier=${id}" class="btn btn-primary">Create PO</a></div>`
       }
 
       if (tab === 'shipments') {
@@ -167,7 +167,7 @@
                 </tr>`).join('')}
               </tbody>
             </table>
-          </div>` : `<div class="empty-state"><div class="empty-state-icon">✈️</div><h3>No shipments</h3><p>No shipments from this supplier yet</p></div>`
+          </div>` : `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No shipments</h3><p>No shipments from this supplier yet</p></div>`
       }
 
       if (tab === 'performance') {

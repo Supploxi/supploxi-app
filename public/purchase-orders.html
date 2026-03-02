@@ -42,7 +42,7 @@
           <button class="btn btn-primary" onclick="openModal()">+ New Order</button>
         </div>
         <div id="table-body">
-          <div class="empty-state"><div class="empty-state-icon">📋</div><h3>No purchase orders yet</h3><p>Create your first purchase order to start managing your imports</p><button class="btn btn-primary" onclick="openModal()">+ Create Order</button></div>
+          <div class="empty-state"><div class="empty-state-icon">--</div><h3>No purchase orders yet</h3><p>Create your first purchase order to start managing your imports</p><button class="btn btn-primary" onclick="openModal()">+ Create Order</button></div>
         </div>
       </div>
     </div>
@@ -85,11 +85,11 @@
           <div class="form-group">
             <label class="form-label">Shipping Method</label>
             <select id="f-shipping" class="form-select">
-              <option value="Sea Freight">🚢 Sea Freight</option>
-              <option value="Air Freight">✈️ Air Freight</option>
-              <option value="Express">⚡ Express (DHL/FedEx)</option>
-              <option value="Rail">🚂 Rail</option>
-              <option value="Courier">📦 Courier</option>
+              <option value="Sea Freight">Sea Freight</option>
+              <option value="Air Freight">Air Freight</option>
+              <option value="Express">Express (DHL/FedEx)</option>
+              <option value="Rail">Rail</option>
+              <option value="Courier">Courier</option>
             </select>
           </div>
         </div>
@@ -165,7 +165,7 @@
         return true
       })
       if (!list.length) {
-        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No orders found</h3><p>Try adjusting your filters</p></div>`
+        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No orders found</h3><p>Try adjusting your filters</p></div>`
         return
       }
       document.getElementById('table-body').innerHTML = `
@@ -180,14 +180,14 @@
                 <td><strong>${o.po_number}</strong></td>
                 <td>${window.escapeHtml(o.suppliers?.company_name||'—')}</td>
                 <td>${window.formatDate(o.order_date)}</td>
-                <td style="color:${isOverdue?'var(--red)':'inherit'}">${window.formatDate(o.expected_delivery)}${isOverdue?' ⚠️':''}</td>
+                <td style="color:${isOverdue?'var(--red)':'inherit'}">${window.formatDate(o.expected_delivery)}${isOverdue?' (overdue)':''}</td>
                 <td>—</td>
                 <td><strong>${window.formatCurrency(o.total_value)}</strong></td>
                 <td>${window.getStatusBadge(o.payment_status||'pending')}</td>
                 <td>${window.getStatusBadge(o.status)}</td>
                 <td onclick="event.stopPropagation()">
                   <div class="action-btns">
-                    <button class="btn btn-sm btn-secondary" onclick="window.location.href='/po-detail.html?id=${o.id}'" title="View">👁</button>
+                    <button class="btn btn-sm btn-secondary" onclick="window.location.href='/po-detail.html?id=${o.id}'" title="View">View</button>
                   </div>
                 </td>
               </tr>`
