@@ -44,7 +44,7 @@
       await window.initLayout({ page: 'financials', title: 'Financials' })
       const [{ data: p }, { data: o }, { data: s }] = await Promise.all([
         window._sb.from('products').select('*').eq('user_id', user.id),
-        window._sb.from('purchase_orders').select('*').eq('user_id', user.id),
+        window._sb.from('purchase_orders').select('*, suppliers(company_name)').eq('user_id', user.id),
         window._sb.from('shipments').select('*').eq('user_id', user.id)
       ])
       products = p || []
@@ -124,7 +124,7 @@
         const bySupplier = {}
         orders.forEach(o => {
           if (!o.supplier_id) return
-          if (!bySupplier[o.supplier_id]) bySupplier[o.supplier_id] = { name: o.supplier_id, value: 0, count: 0 }
+          if (!bySupplier[o.supplier_id]) bySupplier[o.supplier_id] = { name: o.suppliers?.company_name || 'Unknown', value: 0, count: 0 }
           bySupplier[o.supplier_id].value += o.total_value || 0
           bySupplier[o.supplier_id].count++
         })

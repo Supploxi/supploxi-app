@@ -165,7 +165,7 @@
       const [{ data: s }, { data: sup }, { data: pos }] = await Promise.all([
         window._sb.from('shipments').select('*, suppliers(company_name)').eq('user_id', user.id).order('created_at', { ascending: false }),
         window._sb.from('suppliers').select('id,company_name').eq('user_id', user.id),
-        window._sb.from('purchase_orders').select('id,po_number').eq('user_id', user.id).not('status','in',['received','cancelled'])
+        window._sb.from('purchase_orders').select('id,po_number').eq('user_id', user.id).not('status','in','("received","cancelled")')
       ])
       shipments = s || []
 
