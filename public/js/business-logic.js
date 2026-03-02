@@ -16,35 +16,49 @@ window.calcMargin = (selling, landed) => {
 
 // ---- Reorder Alert Calculation ----
 // Accepts optional settings from user_settings table:
-//   customs_buffer_days, safety_stock_days, include_customs_buffer
+//   ai_reorder_enabled, include_customs_buffer, customs_buffer_days, safety_stock_days
 window.calcReorderAlert = (product, settings) => {
   const s = settings || {}
+
+  // If AI reorder is disabled, return neutral result
+  if (s.ai_reorder_enabled === false) {
+    return { urgency: 'ok', daysUntilStockout: 0, suggestedQty: 0, shouldOrder: false, message: '' }
+  }
+
   const stock = parseInt(product.stock_quantity) || 0
   const avgDaily = parseFloat(product.avg_daily_sales) || 1
-  const leadTime = parseInt(product.lead_time_days) || 30
+  const supplierLeadTime = parseInt(product.lead_time_days) || 30
   const customsBuffer = (s.include_customs_buffer !== false) ? (parseInt(s.customs_buffer_days) || 15) : 0
   const safetyBuffer = parseInt(s.safety_stock_days) || 7
-  const totalLeadTime = leadTime + customsBuffer + safetyBuffer
+  const totalLeadTime = supplierLeadTime + customsBuffer + safetyBuffer
   const daysLeft = stock / avgDaily
   const suggestedQty = Math.ceil(avgDaily * totalLeadTime * 1.3)
 
   let urgency = 'ok'
-  if (daysLeft <= leadTime) urgency = 'critical'
-  else if (daysLeft <= totalLeadTime) urgency = 'soon'
-  else if (daysLeft <= totalLeadTime + 14) urgency = 'monitor'
+  let message = ''
+
+  if (daysLeft <= 0) {
+    urgency = 'critical'
+    message = 'Out of stock'
+  } else if (daysLeft <= supplierLeadTime) {
+    urgency = 'critical'
+    message = `Order NOW — will run out before supplier can deliver (${Math.floor(daysLeft)}d left, need ${supplierLeadTime}d)`
+  } else if (daysLeft <= totalLeadTime) {
+    urgency = 'soon'
+    message = `Order soon — ${Math.floor(daysLeft)} days left, needs ${totalLeadTime} days total`
+  } else if (daysLeft <= totalLeadTime * 1.3) {
+    urgency = 'monitor'
+    message = `Monitor — ${Math.floor(daysLeft)} days left`
+  } else {
+    message = `OK — ${Math.floor(daysLeft)} days of stock`
+  }
 
   return {
     urgency,
     daysUntilStockout: Math.floor(daysLeft),
     suggestedQty,
     shouldOrder: urgency === 'critical' || urgency === 'soon',
-    message: urgency === 'critical'
-      ? `Order NOW \u2014 stockout in ${Math.floor(daysLeft)} days`
-      : urgency === 'soon'
-      ? `Order soon \u2014 ${Math.floor(daysLeft)} days left`
-      : urgency === 'monitor'
-      ? `Monitor \u2014 ${Math.floor(daysLeft)} days left`
-      : `OK \u2014 ${Math.floor(daysLeft)} days of stock`
+    message
   }
 }
 

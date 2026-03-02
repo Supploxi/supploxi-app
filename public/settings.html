@@ -313,7 +313,7 @@
 
     async function savePreferences() {
       const user = await window.getUser()
-      await window._sb.from('user_settings').upsert({
+      const { error } = await window._sb.from('user_settings').upsert({
         user_id: user.id,
         customs_buffer_days: parseInt(document.getElementById('pref-buffer')?.value)||15,
         safety_stock_days: parseInt(document.getElementById('pref-safety')?.value)||7,
@@ -322,7 +322,19 @@
         ai_reorder_enabled: document.getElementById('pref-ai')?.checked??true,
         include_customs_buffer: document.getElementById('pref-customs')?.checked??true
       })
-      window.showToast('Preferences saved!', 'success')
+      if (error) {
+        window.showToast('Error saving: ' + error.message, 'error')
+        return
+      }
+      settings = { ...settings,
+        customs_buffer_days: parseInt(document.getElementById('pref-buffer')?.value)||15,
+        safety_stock_days: parseInt(document.getElementById('pref-safety')?.value)||7,
+        default_origin: document.getElementById('pref-origin')?.value||'CN',
+        low_margin_threshold: parseInt(document.getElementById('pref-margin')?.value)||20,
+        ai_reorder_enabled: document.getElementById('pref-ai')?.checked??true,
+        include_customs_buffer: document.getElementById('pref-customs')?.checked??true
+      }
+      window.showToast('Settings saved!', 'success')
     }
 
     async function confirmDeleteAccount() {

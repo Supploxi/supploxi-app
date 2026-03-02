@@ -479,3 +479,14 @@ ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAUL
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS unit_cost NUMERIC;
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS reference TEXT;
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- v2.3: Add AI reorder engine + preferences columns to user_settings
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD';
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS notification_settings JSONB DEFAULT '{}';
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS customs_buffer_days INTEGER DEFAULT 15;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS safety_stock_days INTEGER DEFAULT 7;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS default_origin TEXT DEFAULT 'CN';
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS low_margin_threshold INTEGER DEFAULT 20;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS ai_reorder_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS include_customs_buffer BOOLEAN DEFAULT TRUE;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS woo_store_url TEXT;
