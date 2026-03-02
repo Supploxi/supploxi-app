@@ -174,40 +174,79 @@
           body: JSON.stringify({ numbers: [shipment.tracking_number] })
         })
         const data = await res.json()
+
+        // Debug: log full response to help diagnose parsing issues
+        console.log('[Tracking] Full API response:', JSON.stringify(data, null, 2))
+
         const accepted = data?.data?.accepted
         if (accepted?.length > 0) {
-          const track = accepted[0]
-          const tag = track.track?.z0?.z
-          if (tag) {
-            const newStatus = window.map17TrackStatus(tag)
-            const events = track.track?.z1 || []
-            // Salva eventos no banco
-            if (events.length > 0) {
-              await window._sb.from('tracking_events').delete().eq('shipment_id', shipId)
-              await window._sb.from('tracking_events').insert(events.map(ev => ({
-                shipment_id: shipId,
-                event_time: ev.a ? new Date(ev.a).toISOString() : new Date().toISOString(),
-                location: ev.c || '',
-                description: ev.z || '',
-                status_code: tag
-              })))
-            }
-            const lastEvent = events[0]
-            await window._sb.from('shipments').update({
-              status: newStatus,
-              last_event: lastEvent?.z || '',
-              last_event_location: lastEvent?.c || '',
-              last_synced_at: new Date().toISOString()
-            }).eq('id', shipId)
-            window.showToast('Tracking updated!', 'success')
-          } else {
-            await window._sb.from('shipments').update({ last_synced_at: new Date().toISOString() }).eq('id', shipId)
-            window.showToast('No new events yet. Try again later.', 'info')
+          const result = accepted[0]
+          const trackInfo = result.track
+
+          console.log('[Tracking] Track keys:', Object.keys(trackInfo || {}))
+          console.log('[Tracking] track.e:', trackInfo?.e, '| track.w1:', trackInfo?.w1)
+          console.log('[Tracking] track.z0:', JSON.stringify(trackInfo?.z0))
+          console.log('[Tracking] track.z1 count:', trackInfo?.z1?.length || 0)
+
+          if (!trackInfo) {
+            window.showToast('No tracking data available yet.', 'info')
+            btn.textContent = 'Refresh Tracking'
+            btn.disabled = false
+            return
           }
+
+          // Status: use track.e (numeric) or track.w1 (string tag)
+          // NOT z0.z which is just the event description text
+          const statusCode = trackInfo.e
+          const statusTag = trackInfo.w1
+          const newStatus = window.map17TrackStatus(statusCode, statusTag)
+          console.log('[Tracking] Mapped status:', { code: statusCode, tag: statusTag, result: newStatus })
+
+          // Events from z1 array, latest event from z0
+          const events = trackInfo.z1 || []
+          const latestEvent = trackInfo.z0 || events[0] || null
+
+          // Save events to tracking_events table
+          if (events.length > 0) {
+            await window._sb.from('tracking_events').delete().eq('shipment_id', shipId)
+            const { error: insertErr } = await window._sb.from('tracking_events').insert(events.map(ev => ({
+              shipment_id: shipId,
+              event_time: ev.a ? new Date(ev.a).toISOString() : new Date().toISOString(),
+              location: ev.c || '',
+              description: ev.z || '',
+              status_code: String(statusCode ?? '')
+            })))
+            if (insertErr) console.error('[Tracking] Error saving events:', insertErr.message)
+          }
+
+          // Update shipment record
+          const updateData = {
+            status: newStatus,
+            last_synced_at: new Date().toISOString()
+          }
+          if (latestEvent) {
+            updateData.last_event = latestEvent.z || ''
+            updateData.last_event_location = latestEvent.c || ''
+          }
+          if (trackInfo.c) {
+            updateData.carrier_detected = trackInfo.c
+          }
+
+          const { error: updateErr } = await window._sb.from('shipments').update(updateData).eq('id', shipId)
+          if (updateErr) console.error('[Tracking] Error updating shipment:', updateErr.message)
+
+          window.showToast(events.length > 0 ? 'Tracking updated!' : 'Status updated, no new events yet.', 'success')
         } else {
-          window.showToast('Tracking number not found yet. Try again later.', 'warning')
+          const rejected = data?.data?.rejected
+          if (rejected?.length > 0) {
+            console.log('[Tracking] Rejected:', JSON.stringify(rejected))
+            window.showToast('Tracking number not recognized by carrier yet.', 'warning')
+          } else {
+            window.showToast('No tracking data found. Try again later.', 'info')
+          }
         }
       } catch(e) {
+        console.error('[Tracking] Error:', e)
         window.showToast('Error refreshing: ' + e.message, 'error')
       }
       btn.textContent = 'Refresh Tracking'

@@ -46,8 +46,24 @@ window.calcReorderAlert = (product) => {
 }
 
 // ---- Auto Tracking Status Mapping ----
-window.map17TrackStatus = (tag) => {
-  const map = {
+// Handles both numeric codes (track.e) and string tags (track.w1)
+window.map17TrackStatus = (codeOrTag, tag) => {
+  // Numeric status codes (17Track v2.2 track.e field)
+  const numericMap = {
+    0: 'processing',      // NotFound
+    10: 'in_transit',     // InTransit
+    20: 'exception',      // Expired
+    30: 'in_transit',     // PickedUp
+    35: 'exception',      // Undelivered
+    40: 'delivered',      // Delivered
+    50: 'exception',      // Alert
+  }
+  if (typeof codeOrTag === 'number' && numericMap[codeOrTag] !== undefined) {
+    return numericMap[codeOrTag]
+  }
+
+  // String status tags (track.w1 or legacy z0.z)
+  const stringMap = {
     NotFound: 'processing',
     InTransit: 'in_transit',
     Delivered: 'delivered',
@@ -56,9 +72,15 @@ window.map17TrackStatus = (tag) => {
     Expired: 'exception',
     PickedUp: 'in_transit',
     OutForDelivery: 'out_for_delivery',
-    CustomsHold: 'customs'
+    CustomsHold: 'customs',
+    Alert: 'exception',
   }
-  return map[tag] || 'processing'
+  const tagStr = tag || (typeof codeOrTag === 'string' ? codeOrTag : null)
+  if (tagStr && stringMap[tagStr]) {
+    return stringMap[tagStr]
+  }
+
+  return 'processing'
 }
 
 // ---- Supplier Score Calculation ----
