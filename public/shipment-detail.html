@@ -89,7 +89,7 @@
             </div>
           </div>
         </div>`).join('') :
-        `<div class="empty-state" style="padding:20px"><p>No tracking events yet. Auto-sync runs every 6 hours.</p></div>`
+        `<div class="empty-state" style="padding:20px"><p>No tracking events yet. Auto-sync runs every 3 hours.</p></div>`
 
       document.getElementById('shipment-content').innerHTML = `
         <!-- HEADER -->
@@ -127,7 +127,7 @@
           <div class="card">
             <div class="card-header">
               <span class="card-title">Tracking Timeline</span>
-              <span style="font-size:12px;color:var(--green)">Auto-updates every 6h</span>
+              <span style="font-size:12px;color:var(--green)">Auto-updates every 3h</span>
             </div>
             <div class="tracking-timeline">${timelineHtml}</div>
           </div>
@@ -168,11 +168,19 @@
       btn.textContent = 'Refreshing...'
       btn.disabled = true
       try {
+        const user = await window.getUser()
         const res = await fetch('/api/tracking/getinfo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ numbers: [shipment.tracking_number] })
+          body: JSON.stringify({ numbers: [shipment.tracking_number], user_id: user.id })
         })
+        if (res.status === 429) {
+          const err = await res.json()
+          window.showToast(`Monthly tracking limit reached (${err.used}/${err.limit}). Upgrade your plan for more.`, 'warning')
+          btn.textContent = 'Refresh Tracking'
+          btn.disabled = false
+          return
+        }
         const data = await res.json()
 
         // Debug: log full response to help diagnose parsing issues

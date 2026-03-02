@@ -214,6 +214,10 @@
       }
 
       if (tab === 'billing') {
+        const trackUsed = settings.tracking_count_month || 0
+        const trackLimit = settings.monthly_tracking_limit || 999
+        const trackPct = Math.min(100, Math.round(trackUsed / trackLimit * 100))
+
         document.getElementById('tab-content').innerHTML = `
           <div class="settings-section">
             <div class="plan-card" style="margin-bottom:24px">
@@ -226,11 +230,23 @@
               </div>
             </div>
 
+            <!-- Tracking Usage -->
+            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <h3 style="font-size:14px;font-weight:600">Tracking Usage This Month</h3>
+                <span style="font-size:13px;color:var(--text-muted)">${trackUsed} / ${trackLimit} lookups</span>
+              </div>
+              <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden">
+                <div style="background:${trackPct>80?'var(--orange)':trackPct>95?'var(--red)':'var(--green)'};height:100%;width:${trackPct}%;border-radius:4px;transition:width 0.3s"></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Resets on the 1st of each month</div>
+            </div>
+
             <h3 style="font-size:15px;font-weight:600;margin-bottom:16px">What's included in Beta</h3>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px">
               ${['Unlimited suppliers','Unlimited products','Auto shipment tracking','AI Reorder Engine','Tariff Tracker','Financials & Reports','Store Integrations','Priority support'].map(f => `
                 <div style="display:flex;align-items:center;gap:8px;font-size:13px">
-                  <span style="color:var(--green)">✓</span> ${f}
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 4 6-7"/></svg> ${f}
                 </div>`).join('')}
             </div>
 
@@ -238,11 +254,20 @@
               <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">Coming Soon — Paid Plans</h3>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">After beta, Supploxi will offer flexible plans. Beta users will get a special discount.</p>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-                ${[['Starter','$19/mo','Up to 5 suppliers'],['Growth','$49/mo','Up to 20 suppliers'],['Scale','$99/mo','Unlimited everything']].map(([name,price,desc]) => `
-                  <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center">
-                    <div style="font-weight:600;margin-bottom:4px">${name}</div>
-                    <div style="font-size:20px;font-weight:700;color:var(--green);margin-bottom:4px">${price}</div>
-                    <div style="font-size:12px;color:var(--text-muted)">${desc}</div>
+                ${[
+                  ['Starter','$19','5 suppliers','50 trackings/mo'],
+                  ['Growth','$49','20 suppliers','200 trackings/mo'],
+                  ['Scale','$99','Unlimited suppliers','500 trackings/mo']
+                ].map(([name,price,sup,track]) => `
+                  <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center">
+                    <div style="font-weight:600;margin-bottom:6px">${name}</div>
+                    <div style="font-size:28px;font-weight:700;color:var(--green);margin-bottom:2px">${price}<span style="font-size:14px;font-weight:400;color:var(--text-muted)">/mo</span></div>
+                    <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:12px;text-align:left">
+                      <div style="display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><path d="M3 8l4 4 6-7"/></svg> ${sup}</div>
+                      <div style="display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><path d="M3 8l4 4 6-7"/></svg> <strong>${track}</strong></div>
+                      <div style="display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><path d="M3 8l4 4 6-7"/></svg> AI Reorder Engine</div>
+                      <div style="display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><path d="M3 8l4 4 6-7"/></svg> Tariff Tracker</div>
+                    </div>
                   </div>`).join('')}
               </div>
             </div>

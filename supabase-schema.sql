@@ -42,6 +42,10 @@ CREATE TABLE IF NOT EXISTS user_settings (
   woo_consumer_secret TEXT,
   bigcommerce_store_hash TEXT,
   bigcommerce_access_token TEXT,
+  plan TEXT DEFAULT 'beta',
+  monthly_tracking_limit INTEGER DEFAULT 999,
+  tracking_count_month INTEGER DEFAULT 0,
+  tracking_count_reset DATE DEFAULT CURRENT_DATE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -457,3 +461,21 @@ CREATE INDEX IF NOT EXISTS idx_inventory_movements_user_id ON inventory_movement
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_product_id ON inventory_movements(product_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_tariff_watches_user_id ON tariff_watches(user_id);
+
+
+-- =============================================
+-- MIGRATIONS (run these on existing databases)
+-- =============================================
+
+-- v2.2: Add tracking limits to user_settings
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'beta';
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS monthly_tracking_limit INTEGER DEFAULT 999;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS tracking_count_month INTEGER DEFAULT 0;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS tracking_count_reset DATE DEFAULT CURRENT_DATE;
+
+-- v2.2: Ensure inventory_movements has all required columns
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS movement_type TEXT DEFAULT 'adjustment';
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 0;
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS unit_cost NUMERIC;
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS reference TEXT;
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS notes TEXT;

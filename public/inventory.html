@@ -357,7 +357,14 @@
         reference: document.getElementById('adj-ref').value.trim(),
         notes: document.getElementById('adj-notes').value.trim()
       })
-      if (movErr) { document.getElementById('adj-error').textContent = movErr.message; return }
+      if (movErr) {
+        if (movErr.message.includes('movement_type') || movErr.message.includes('schema cache')) {
+          document.getElementById('adj-error').innerHTML = 'Database schema needs updating. Run the migration SQL in <a href="https://supabase.com/dashboard" target="_blank" style="color:var(--green)">Supabase SQL Editor</a>.'
+        } else {
+          document.getElementById('adj-error').textContent = movErr.message
+        }
+        return
+      }
 
       await window._sb.from('products').update({ stock_quantity: newStock }).eq('id', productId)
       window.showToast('Stock updated!', 'success')
