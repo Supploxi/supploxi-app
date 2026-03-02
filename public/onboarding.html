@@ -219,7 +219,7 @@
           full_name: name,
           company_name: company,
           timezone: document.getElementById('ob-timezone').value
-        })
+        }, { onConflict: 'user_id' })
       }
 
       if (step === 2) {
@@ -288,27 +288,27 @@
     async function finishOnboarding() {
       const user = await window.getUser()
       if (!user) { window.location.href = '/'; return }
-      const { error } = await window._sb.from('user_profiles').upsert({
-        user_id: user.id,
-        onboarding_completed: true
-      })
-      if (error) {
-        console.error('Failed to save onboarding:', error.message)
-        alert('Error saving your setup. Please try again.')
-        return
-      }
-      // Verify it actually saved before redirecting
-      const { data: check } = await window._sb
+
+      // Try update first (row should exist from Step 1)
+      const { error: updateErr, count } = await window._sb
         .from('user_profiles')
-        .select('onboarding_completed')
+        .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
         .eq('user_id', user.id)
-        .single()
-      if (check?.onboarding_completed === true) {
-        window.location.href = '/dashboard.html'
-      } else {
-        console.error('Onboarding flag not persisted')
-        alert('Error saving your setup. Please try again.')
+
+      if (updateErr) {
+        console.error('Update failed, trying upsert:', updateErr.message)
+        // Fallback: upsert with onConflict to handle edge case where row doesn't exist
+        const { error: upsertErr } = await window._sb
+          .from('user_profiles')
+          .upsert({ user_id: user.id, onboarding_completed: true }, { onConflict: 'user_id' })
+        if (upsertErr) {
+          console.error('Upsert also failed:', upsertErr.message)
+          alert('Error saving your setup. Please try again.')
+          return
+        }
       }
+
+      window.location.href = '/dashboard.html'
     }
   </script>
 </body>

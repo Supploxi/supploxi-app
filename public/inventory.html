@@ -192,7 +192,7 @@
       document.getElementById('s-out').textContent = out
 
       if (!list.length) {
-        document.getElementById('stock-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon">--</div><h3>No products found</h3></div>'
+        document.getElementById('stock-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h24v18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M10 7V5"/><path d="M22 7V5"/><path d="M11 15h10"/><path d="M11 21h6"/></svg></div><h3>No products found</h3></div>'
         return
       }
 
@@ -238,16 +238,16 @@
       })
 
       if (!list.length) {
-        document.getElementById('movements-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon">--</div><h3>No movements yet</h3><p>Stock movements will appear here when you adjust inventory</p></div>'
+        document.getElementById('movements-table').innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h24v18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M10 7V5"/><path d="M22 7V5"/><path d="M11 15h10"/><path d="M11 21h6"/></svg></div><h3>No movements yet</h3><p>Stock movements will appear here when you adjust inventory</p></div>'
         return
       }
 
       const typeConfig = {
-        in: { icon: '+', color: 'var(--green)', label: 'Stock In' },
-        out: { icon: '-', color: 'var(--red)', label: 'Stock Out' },
-        adjustment: { icon: '±', color: 'var(--blue)', label: 'Adjustment' },
-        return: { icon: '←', color: 'var(--purple)', label: 'Return' },
-        damaged: { icon: '!', color: 'var(--orange)', label: 'Damaged' }
+        in: { icon: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>', color: 'var(--green)', label: 'Stock In' },
+        out: { icon: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10"/></svg>', color: 'var(--red)', label: 'Stock Out' },
+        adjustment: { icon: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10M3 13h10"/></svg>', color: 'var(--blue)', label: 'Adjustment' },
+        return: { icon: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3M3 8l4-4M3 8l4 4"/></svg>', color: 'var(--purple)', label: 'Return' },
+        damaged: { icon: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v6M8 12v1"/></svg>', color: 'var(--orange)', label: 'Damaged' }
       }
 
       document.getElementById('movements-table').innerHTML = `

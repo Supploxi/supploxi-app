@@ -52,7 +52,7 @@
           <button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button>
         </div>
         <div id="table-body">
-          <div class="empty-state"><div class="empty-state-icon">--</div><h3>No suppliers yet</h3><p>Add your first supplier to get started</p><button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button></div>
+          <div class="empty-state"><div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="24" height="24" rx="4"/><path d="M11 13h10M11 19h6"/></svg></div><h3>No suppliers yet</h3><p>Add your first supplier to get started</p><button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button></div>
         </div>
       </div>
     </div>
@@ -234,7 +234,7 @@
         return true
       })
       if (!list.length) {
-        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No suppliers found</h3><p>Try adjusting your filters</p></div>`
+        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="24" height="24" rx="4"/><path d="M11 13h10M11 19h6"/></svg></div><h3>No suppliers found</h3><p>Try adjusting your filters</p></div>`
         return
       }
       document.getElementById('table-body').innerHTML = `
@@ -273,8 +273,8 @@
                 <td>${window.getStatusBadge(s.status||'active')}</td>
                 <td onclick="event.stopPropagation()">
                   <div class="action-btns">
-                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editSupplier('${s.id}')" title="Edit">Edit</button>
-                    <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${s.id}','${window.escapeHtml(s.company_name)}')" title="Delete">Del</button>
+                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editSupplier('${s.id}')" title="Edit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5l3 3L5 14H2v-3z"/></svg></button>
+                    <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${s.id}','${window.escapeHtml(s.company_name)}')" title="Delete"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12"/><path d="M5.5 4V2.5h5V4"/><path d="M3.5 4l.5 9.5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1L12.5 4"/></svg></button>
                   </div>
                 </td>
               </tr>`

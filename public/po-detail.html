@@ -146,7 +146,7 @@
       const stepsHtml = STATUS_STEPS.map((s, i) => `
         <div class="status-step ${i < stepIdx ? 'done' : i === stepIdx ? 'active' : ''}">
           <div class="status-step-line"></div>
-          <div class="status-step-dot">${i < stepIdx ? '✓' : i + 1}</div>
+          <div class="status-step-dot">${i < stepIdx ? '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 4 6-7"/></svg>' : i + 1}</div>
           <div class="status-step-label">${STATUS_LABELS[s]}</div>
         </div>`).join('')
 
@@ -204,7 +204,7 @@
                       <td style="color:${it.quantity_received>=it.quantity?'var(--green)':'var(--text-muted)'}">${it.quantity_received||0}</td>
                       <td>${window.formatCurrency(it.unit_price)}</td>
                       <td><strong>${window.formatCurrency(it.total_price||it.quantity*it.unit_price)}</strong></td>
-                      <td><button class="btn btn-sm btn-danger btn-icon" onclick="deleteItem('${it.id}')">Del</button></td>
+                      <td><button class="btn btn-sm btn-danger btn-icon" onclick="deleteItem('${it.id}')" title="Delete"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12"/><path d="M5.5 4V2.5h5V4"/><path d="M3.5 4l.5 9.5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1L12.5 4"/></svg></button></td>
                     </tr>`).join('')}
                     <tr style="background:rgba(0,0,0,0.2)">
                       <td colspan="5" style="text-align:right;font-weight:600;padding:14px 16px">Total</td>

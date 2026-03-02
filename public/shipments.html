@@ -41,7 +41,7 @@
           <button class="btn btn-primary" onclick="openModal()">+ Add Shipment</button>
         </div>
         <div id="table-body">
-          <div class="empty-state"><div class="empty-state-icon">--</div><h3>No shipments yet</h3><p>Add a tracking number to start monitoring your shipments automatically</p><button class="btn btn-primary" onclick="openModal()">+ Add Shipment</button></div>
+          <div class="empty-state"><div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l13-15 13 15"/><path d="M8 17v10h16V17"/></svg></div><h3>No shipments yet</h3><p>Add a tracking number to start monitoring your shipments automatically</p><button class="btn btn-primary" onclick="openModal()">+ Add Shipment</button></div>
         </div>
       </div>
     </div>
@@ -206,7 +206,7 @@
         return true
       })
       if (!list.length) {
-        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No shipments found</h3></div>`
+        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l13-15 13 15"/><path d="M8 17v10h16V17"/></svg></div><h3>No shipments found</h3></div>`
         return
       }
       document.getElementById('table-body').innerHTML = `
@@ -229,7 +229,7 @@
               <td style="font-size:12px;color:var(--text-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${window.escapeHtml(s.last_event||'Waiting for update...')}</td>
               <td onclick="event.stopPropagation()">
                 <div class="action-btns">
-                  <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${s.id}','${window.escapeHtml(s.tracking_number)}')" title="Delete">Del</button>
+                  <button class="btn btn-sm btn-danger btn-icon" onclick="askDelete('${s.id}','${window.escapeHtml(s.tracking_number)}')" title="Delete"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12"/><path d="M5.5 4V2.5h5V4"/><path d="M3.5 4l.5 9.5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1L12.5 4"/></svg></button>
                 </div>
               </td>
             </tr>`).join('')}

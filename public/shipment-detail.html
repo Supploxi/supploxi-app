@@ -34,11 +34,11 @@
     let shipment = null
 
     const PROGRESS_STEPS = [
-      { key: 'processing', icon: '1', label: 'Processed' },
-      { key: 'in_transit', icon: '2', label: 'In Transit' },
-      { key: 'customs', icon: '3', label: 'Customs' },
-      { key: 'out_for_delivery', icon: '4', label: 'Out for Delivery' },
-      { key: 'delivered', icon: '5', label: 'Delivered' }
+      { key: 'processing', icon: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M6 7h4M6 10h2"/></svg>', label: 'Processed' },
+      { key: 'in_transit', icon: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12L8 4l6 8"/><path d="M5 10v4h6v-4"/></svg>', label: 'In Transit' },
+      { key: 'customs', icon: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M8 7.5v6"/></svg>', label: 'Customs' },
+      { key: 'out_for_delivery', icon: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="13" r="1.5"/><circle cx="12" cy="13" r="1.5"/><path d="M1 1h2l1.5 8h8L14 4H5"/></svg>', label: 'Out for Delivery' },
+      { key: 'delivered', icon: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 4 6-7"/></svg>', label: 'Delivered' }
     ]
 
     async function load() {

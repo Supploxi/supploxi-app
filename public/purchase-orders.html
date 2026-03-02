@@ -42,7 +42,7 @@
           <button class="btn btn-primary" onclick="openModal()">+ New Order</button>
         </div>
         <div id="table-body">
-          <div class="empty-state"><div class="empty-state-icon">--</div><h3>No purchase orders yet</h3><p>Create your first purchase order to start managing your imports</p><button class="btn btn-primary" onclick="openModal()">+ Create Order</button></div>
+          <div class="empty-state"><div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h16a2 2 0 0 1 2 2v22a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M11 10h10M11 16h10M11 22h6"/></svg></div><h3>No purchase orders yet</h3><p>Create your first purchase order to start managing your imports</p><button class="btn btn-primary" onclick="openModal()">+ Create Order</button></div>
         </div>
       </div>
     </div>
@@ -165,7 +165,7 @@
         return true
       })
       if (!list.length) {
-        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon">--</div><h3>No orders found</h3><p>Try adjusting your filters</p></div>`
+        document.getElementById('table-body').innerHTML = `<div class="empty-state"><div class="empty-state-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h16a2 2 0 0 1 2 2v22a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M11 10h10M11 16h10M11 22h6"/></svg></div><h3>No orders found</h3><p>Try adjusting your filters</p></div>`
         return
       }
       document.getElementById('table-body').innerHTML = `
@@ -187,7 +187,7 @@
                 <td>${window.getStatusBadge(o.status)}</td>
                 <td onclick="event.stopPropagation()">
                   <div class="action-btns">
-                    <button class="btn btn-sm btn-secondary" onclick="window.location.href='/po-detail.html?id=${o.id}'" title="View">View</button>
+                    <button class="btn btn-sm btn-secondary" onclick="window.location.href='/po-detail.html?id=${o.id}'" title="View"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></button>
                   </div>
                 </td>
               </tr>`
