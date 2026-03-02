@@ -113,7 +113,7 @@ app.get('/', (req, res) => {
 // =============================================
 // START SERVER
 // =============================================
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Supploxi v2 running at http://localhost:${PORT}`);
   console.log('17Track integration: ENABLED');
   console.log(`Auto-sync scheduled every 6 hours`);
