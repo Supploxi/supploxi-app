@@ -25,20 +25,13 @@ const Settings = lazy(() => import('./pages/Settings'))
 const Invite = lazy(() => import('./pages/Invite'))
 
 function RequireAuth({ children, perm }) {
-  const { user, loading, hasAccess, isSubscriptionActive } = useAuth()
+  const { user, loading, hasAccess } = useAuth()
   const location = useLocation()
 
   if (loading) return <Loading text="Authenticating..." />
 
   // Not logged in → redirect to login
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
-
-  // Subscription expired → allow only subscription and settings pages
-  if (!isSubscriptionActive()) {
-    const allowedPaths = ['/subscription', '/settings']
-    const isAllowed = allowedPaths.some(p => location.pathname.startsWith(p))
-    if (!isAllowed) return <Navigate to="/subscription" replace />
-  }
 
   // Permission check
   if (perm && !hasAccess(perm)) {
