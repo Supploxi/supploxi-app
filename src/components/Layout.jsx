@@ -9,7 +9,7 @@ import useIsMobile from '../hooks/useIsMobile'
 
 const NAV = [
   { section: 'MAIN' },
-  { label: 'Dashboard', path: '/', icon: 'LayoutDashboard', perm: 'dashboard' },
+  { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', perm: 'dashboard' },
   { label: 'Orders', path: '/orders', icon: 'ShoppingCart', perm: 'orders' },
 
   { section: 'OPERATIONS' },
@@ -75,7 +75,7 @@ export default function Layout({ children }) {
               style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', display: 'block', flexShrink: 0 }}
             />
             <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: c.text, fontFamily: 'Inter, sans-serif' }}>
-              Suppl<span style={{ color: '#00d4aa' }}>o</span>xi
+              sup<span style={{ color: '#00d4aa' }}>p</span>loxi
             </span>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function Layout({ children }) {
               <NavLink
                 key={item.path}
                 to={item.path}
-                end={item.path === '/'}
+                end={item.path === '/dashboard'}
                 onClick={handleNav}
                 className={({ isActive }) => `sp-nav-item ${isActive ? 'active' : ''}`}
               >

@@ -42,7 +42,7 @@ function RequireAuth({ children, perm }) {
 
   // Permission check
   if (perm && !hasAccess(perm)) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/dashboard" replace />
   }
 
   return children
@@ -67,7 +67,7 @@ function AppRoutes() {
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={
-        user ? <Navigate to="/" replace /> : (
+        user ? <Navigate to="/dashboard" replace /> : (
           <Suspense fallback={<Loading />}>
             <Login />
           </Suspense>
@@ -79,8 +79,13 @@ function AppRoutes() {
         </Suspense>
       } />
 
-      {/* Protected routes with Layout */}
+      {/* Root redirect */}
       <Route path="/" element={
+        user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
+      } />
+
+      {/* Protected routes with Layout */}
+      <Route path="/dashboard" element={
         <RequireAuth perm="dashboard">
           <Layout>
             <PageWrapper><Dashboard /></PageWrapper>
@@ -166,7 +171,7 @@ function AppRoutes() {
       } />
 
       {/* Catch-all */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }
