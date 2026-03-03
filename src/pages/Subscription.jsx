@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How does annual billing work?',
-    answer: 'Annual plans are billed once per year at a discounted rate equivalent to receiving 2 months free compared to monthly billing. You can switch between monthly and annual billing at any time.',
+    answer: 'Annual plans are billed once per year at a 33% discount compared to monthly billing. You can switch between monthly and annual billing at any time.',
   },
   {
     question: 'What payment methods do you accept?',
@@ -194,42 +194,54 @@ export default function Subscription() {
       {/* Billing Interval Toggle */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 4, marginBottom: 28,
+        gap: 12, marginBottom: 28,
       }}>
-        <div style={{
-          display: 'flex', background: c.surface, border: `1px solid ${c.border}`,
-          borderRadius: 10, padding: 3,
+        <span
+          onClick={() => setInterval('monthly')}
+          style={{
+            fontSize: 14, fontWeight: 500, cursor: 'pointer',
+            color: interval === 'monthly' ? c.text : c.textMuted,
+            transition: 'color 0.2s',
+          }}
+        >
+          Monthly
+        </span>
+        <button
+          onClick={() => setInterval(interval === 'annual' ? 'monthly' : 'annual')}
+          aria-label="Toggle billing"
+          style={{
+            width: 48, height: 26, borderRadius: 13, padding: 3,
+            border: interval === 'annual' ? '1px solid rgba(0,212,170,0.3)' : `1px solid ${c.border}`,
+            background: interval === 'annual' ? 'rgba(0,212,170,0.2)' : c.surfaceHover,
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+            transition: 'background 0.3s, border-color 0.3s',
+            fontFamily: 'inherit',
+          }}
+        >
+          <div style={{
+            width: 20, height: 20, borderRadius: '50%',
+            background: c.accent,
+            transition: 'transform 0.3s',
+            transform: interval === 'annual' ? 'translateX(22px)' : 'translateX(0)',
+          }} />
+        </button>
+        <span
+          onClick={() => setInterval('annual')}
+          style={{
+            fontSize: 14, fontWeight: 500, cursor: 'pointer',
+            color: interval === 'annual' ? c.text : c.textMuted,
+            transition: 'color 0.2s',
+          }}
+        >
+          Annual
+        </span>
+        <span style={{
+          fontSize: 12, fontWeight: 600, color: c.accent,
+          background: 'rgba(0,212,170,0.1)', padding: '4px 10px',
+          borderRadius: 100, border: '1px solid rgba(0,212,170,0.2)',
         }}>
-          <button
-            onClick={() => setInterval('monthly')}
-            style={{
-              padding: '8px 20px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
-              borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: interval === 'monthly' ? c.accent : 'transparent',
-              color: interval === 'monthly' ? '#0a0c14' : c.textSecondary,
-              transition: 'all 0.15s',
-            }}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setInterval('annual')}
-            style={{
-              padding: '8px 20px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
-              borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: interval === 'annual' ? c.accent : 'transparent',
-              color: interval === 'annual' ? '#0a0c14' : c.textSecondary,
-              transition: 'all 0.15s',
-            }}
-          >
-            Annual
-          </button>
-        </div>
-        {interval === 'annual' && (
-          <Badge variant="success" style={{ marginLeft: 8 }}>
-            2 months free
-          </Badge>
-        )}
+          Save 33%
+        </span>
       </div>
 
       {/* Pricing Cards Grid */}
