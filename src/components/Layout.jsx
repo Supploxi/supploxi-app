@@ -47,13 +47,6 @@ export default function Layout({ children }) {
     navigate('/login')
   }
 
-  const planLabel = {
-    trial: 'Trial',
-    starter: 'Starter',
-    growth: 'Growth',
-    scale: 'Scale',
-  }
-
   return (
     <div className="sp-app">
       {/* Mobile hamburger */}
@@ -76,26 +69,14 @@ export default function Layout({ children }) {
         {/* Logo */}
         <div style={{ padding: '20px 16px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px' }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: 8, background: '#00d4aa',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <span style={{ color: '#000000', fontSize: 16, fontWeight: 900, fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>S</span>
-            </div>
-            <div>
-              <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: c.text }}>
-                Supploxi
-              </span>
-              {subscriptionPlan && (
-                <span style={{
-                  display: 'block', fontSize: 10, fontWeight: 600,
-                  color: subscriptionStatus === 'trial' ? c.warning : c.accent,
-                  textTransform: 'uppercase', letterSpacing: '0.05em',
-                }}>
-                  {planLabel[subscriptionPlan] || subscriptionPlan}
-                </span>
-              )}
-            </div>
+            <img
+              src="/logo.png"
+              alt="Supploxi"
+              style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }}
+            />
+            <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: c.text, fontFamily: 'Inter, sans-serif' }}>
+              Suppl<span style={{ color: '#00d4aa' }}>o</span>xi
+            </span>
           </div>
         </div>
 
