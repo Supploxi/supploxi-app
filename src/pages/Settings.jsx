@@ -12,11 +12,6 @@ const TAB_ACCOUNT = 'account'
 const TAB_TEAM = 'team'
 const TAB_GATEWAY = 'gateway'
 const TAB_INTEGRATIONS = 'integrations'
-const TAB_WEBHOOKS = 'webhooks'
-const TAB_SYNC = 'sync'
-const TAB_REPORTS = 'reports'
-const TAB_TAGS = 'tags'
-const TAB_DANGER = 'danger'
 
 const ALL_TABS = [
   { value: TAB_GENERAL, label: 'General' },
@@ -24,11 +19,6 @@ const ALL_TABS = [
   { value: TAB_TEAM, label: 'Team' },
   { value: TAB_GATEWAY, label: 'Payment Gateways' },
   { value: TAB_INTEGRATIONS, label: 'Integrations' },
-  { value: TAB_WEBHOOKS, label: 'Webhooks' },
-  { value: TAB_SYNC, label: 'Sync' },
-  { value: TAB_REPORTS, label: 'Reports' },
-  { value: TAB_TAGS, label: 'Manage Tags' },
-  { value: TAB_DANGER, label: 'Danger Zone' },
 ]
 
 const PERMISSION_MODULES = [
@@ -814,40 +804,6 @@ export default function Settings() {
     )
   }
 
-  // ─── Placeholder tabs ─────────────────────────────────────────
-
-  function renderComingSoon(title, description) {
-    return (
-      <Card>
-        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <div style={{ color: c.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{title}</div>
-          <div style={{ color: c.textMuted, fontSize: 14, maxWidth: 400, margin: '0 auto' }}>{description}</div>
-          <Badge variant="default" style={{ marginTop: 16 }}>Coming Soon</Badge>
-        </div>
-      </Card>
-    )
-  }
-
-  function renderWebhooks() {
-    return renderComingSoon('Webhooks', 'Configure webhook endpoints to receive real-time notifications about events in your account.')
-  }
-
-  function renderSync() {
-    return renderComingSoon('Sync', 'Manage data synchronization settings between Supploxi and your connected platforms.')
-  }
-
-  function renderReports() {
-    return renderComingSoon('Reports', 'Configure automated reports and export schedules for your business data.')
-  }
-
-  function renderTags() {
-    return renderComingSoon('Manage Tags', 'Create and organize custom tags to categorize your suppliers, products, and orders.')
-  }
-
-  function renderDanger() {
-    return renderComingSoon('Danger Zone', 'Account deletion and data export options will be available here.')
-  }
-
   // ─── Tab content router ───────────────────────────────────────
 
   function renderActiveTab() {
@@ -857,11 +813,6 @@ export default function Settings() {
       case TAB_TEAM:         return renderTeam()
       case TAB_GATEWAY:      return renderGatewayFees()
       case TAB_INTEGRATIONS: return renderIntegrations()
-      case TAB_WEBHOOKS:     return renderWebhooks()
-      case TAB_SYNC:         return renderSync()
-      case TAB_REPORTS:      return renderReports()
-      case TAB_TAGS:         return renderTags()
-      case TAB_DANGER:       return renderDanger()
       default:               return null
     }
   }

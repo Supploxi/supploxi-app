@@ -190,7 +190,9 @@ export default function Orders() {
         ? JSON.parse(settingsRow.value)
         : settingsRow.value
 
-      if (!shopifyConfig.shop || !shopifyConfig.accessToken) {
+      const shop = shopifyConfig.shop_url || shopifyConfig.shop
+      const accessToken = shopifyConfig.access_token || shopifyConfig.accessToken
+      if (!shop || !accessToken) {
         setSyncMsg('Shopify credentials are missing. Check your Settings.')
         return
       }
@@ -205,8 +207,8 @@ export default function Orders() {
       // Fetch from Shopify
       const { fetchOrders: shopifyFetchOrders } = await import('../lib/shopify')
       const shopifyOrders = await shopifyFetchOrders({
-        shop: shopifyConfig.shop,
-        accessToken: shopifyConfig.accessToken,
+        shop,
+        accessToken,
         dateFrom: dateRange.from,
         dateTo: dateRange.to,
         existingIds,

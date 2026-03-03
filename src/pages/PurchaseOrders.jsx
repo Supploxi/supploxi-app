@@ -142,9 +142,20 @@ export default function PurchaseOrders() {
   async function createNewPO() {
     setCreating(true)
     try {
-      // Get next PO number from database RPC
-      const { data: poNumber, error: rpcError } = await supabase.rpc('next_po_number')
-      if (rpcError) throw rpcError
+      // Try to get next PO number from database RPC, fallback to timestamp-based
+      let poNumber
+      try {
+        const { data, error: rpcError } = await supabase.rpc('next_po_number')
+        if (rpcError) throw rpcError
+        poNumber = data
+      } catch {
+        // Fallback: generate PO number from timestamp
+        const now = new Date()
+        const yr = String(now.getFullYear()).slice(-2)
+        const mo = String(now.getMonth() + 1).padStart(2, '0')
+        const seq = String(now.getTime()).slice(-4)
+        poNumber = `PO-${yr}${mo}-${seq}`
+      }
 
       // Create the draft PO
       const { data: newPO, error: insertError } = await supabase

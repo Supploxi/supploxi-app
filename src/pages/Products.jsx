@@ -206,7 +206,9 @@ export default function Products() {
         ? JSON.parse(settingsRow.value)
         : settingsRow.value
 
-      if (!shopifyConfig.shop || !shopifyConfig.accessToken) {
+      const shop = shopifyConfig.shop_url || shopifyConfig.shop
+      const accessToken = shopifyConfig.access_token || shopifyConfig.accessToken
+      if (!shop || !accessToken) {
         setSyncMsg('Shopify credentials are missing. Check your Settings.')
         return
       }
@@ -215,8 +217,8 @@ export default function Products() {
       const { fetchProducts } = await import('../lib/shopify')
 
       const shopifyProducts = await fetchProducts({
-        shop: shopifyConfig.shop,
-        accessToken: shopifyConfig.accessToken,
+        shop,
+        accessToken,
       })
 
       if (!shopifyProducts.length) {

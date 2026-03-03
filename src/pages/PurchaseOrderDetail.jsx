@@ -125,7 +125,7 @@ export default function PurchaseOrderDetail() {
 
       const { data: productsData } = await supabase
         .from('products')
-        .select('id, name, sku, unit_price')
+        .select('id, name, sku, unit_cost')
         .order('name', { ascending: true })
 
       setProducts(productsData || [])
@@ -169,7 +169,7 @@ export default function PurchaseOrderDetail() {
       name: product.name,
       sku: product.sku || '',
       quantity: 1,
-      unit_price: product.unit_price || 0,
+      unit_price: product.unit_cost || 0,
     }
     setItems(prev => [...prev, newItem])
     setDirty(true)
@@ -1001,7 +1001,7 @@ export default function PurchaseOrderDetail() {
                   )}
                 </div>
                 <span style={{ color: c.textSecondary, fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-                  {formatUSD(p.unit_price || 0)}
+                  {formatUSD(p.unit_cost || 0)}
                 </span>
               </div>
             ))}
