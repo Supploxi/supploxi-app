@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
-  useColors, Card, StatCard, SectionTitle, Btn, SearchInput, Badge, Select,
+  useColors, Card, StatCard, SectionTitle, Btn, Field, SearchInput, Badge, Select,
   DateRangePicker, useDateRange, Pagination, usePagination, useSort, SortHeader,
-  Tabs, formatDate, formatNumber, formatPercent, Icons, Loading, Empty, Alert,
+  Tabs, Modal, formatDate, formatNumber, formatPercent, Icons, Loading, Empty, Alert,
 } from '../components/UI'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -101,10 +101,12 @@ function downloadCSV(csv, filename) {
   URL.revokeObjectURL(url)
 }
 
+const CARRIER_OPTIONS = ['SF Express', 'DHL', 'FedEx', 'UPS', 'USPS', 'YunExpress', 'Yanwen', 'China Post', 'Other']
+
 export default function Shipments() {
   const c = useColors()
   const isMobile = useIsMobile()
-  const { isViewer } = useAuth()
+  const { isViewer, user } = useAuth()
 
   // Data state
   const [shipments, setShipments] = useState([])
@@ -114,6 +116,15 @@ export default function Shipments() {
   const [syncProgress, setSyncProgress] = useState(null) // "12 / 40 Checking"
   const [expandedId, setExpandedId] = useState(null)
 
+  // Manual shipment creation
+  const [showShipmentModal, setShowShipmentModal] = useState(false)
+  const [shipmentForm, setShipmentForm] = useState({
+    tracking_number: '', carrier: '', origin: '', destination: '', order_id: '', notes: '',
+  })
+  const [shipmentSaving, setShipmentSaving] = useState(false)
+  const [shipmentError, setShipmentError] = useState('')
+  const [ordersList, setOrdersList] = useState([])
+
   // Filter state
   const [search, setSearch] = useState('')
   const [activeGroup, setActiveGroup] = useState('ALL')
@@ -121,6 +132,12 @@ export default function Shipments() {
 
   // Sort state
   const { sortField, sortDir, onSort } = useSort('last_update', 'desc')
+
+  // Load orders for shipment modal
+  useEffect(() => {
+    supabase.from('orders').select('id, order_number').order('created_at', { ascending: false }).limit(100)
+      .then(({ data }) => setOrdersList(data || []))
+  }, [])
 
   // Load shipments from supabase
   useEffect(() => {
@@ -358,6 +375,41 @@ export default function Shipments() {
     setExpandedId(prev => prev === id ? null : id)
   }, [])
 
+  // Manual shipment creation
+  function openNewShipment() {
+    setShipmentForm({ tracking_number: '', carrier: '', origin: '', destination: '', order_id: '', notes: '' })
+    setShipmentError('')
+    setShowShipmentModal(true)
+  }
+
+  async function saveShipment() {
+    if (!shipmentForm.tracking_number.trim()) { setShipmentError('Tracking number is required.'); return }
+    setShipmentSaving(true)
+    setShipmentError('')
+    try {
+      const selectedOrder = ordersList.find(o => o.id === shipmentForm.order_id)
+      const { error: insErr } = await supabase.from('shipments').insert({
+        tracking_number: shipmentForm.tracking_number.trim(),
+        carrier: shipmentForm.carrier || null,
+        origin: shipmentForm.origin.trim() || null,
+        destination: shipmentForm.destination.trim() || null,
+        order_id: shipmentForm.order_id || null,
+        order_number: selectedOrder?.order_number || null,
+        notes: shipmentForm.notes.trim() || null,
+        status: 'Not Found',
+        user_id: user?.id,
+      })
+      if (insErr) throw insErr
+      setShowShipmentModal(false)
+      await loadShipments()
+    } catch (err) {
+      console.error('Save shipment failed:', err)
+      setShipmentError(err.message || 'Failed to add shipment.')
+    } finally {
+      setShipmentSaving(false)
+    }
+  }
+
   const filteredCount = filtered.length
 
   // -- Sidebar filter (desktop) --
@@ -542,15 +594,20 @@ export default function Shipments() {
             onChange={setDateRange}
           />
           {!isViewer && (
-            <Btn
-              variant="primary"
-              size="sm"
-              onClick={handleSync}
-              loading={syncing}
-              icon={<Icons.RefreshCw size={13} />}
-            >
-              {syncing ? 'Syncing...' : 'Sync Tracking'}
-            </Btn>
+            <>
+              <Btn
+                variant="primary"
+                size="sm"
+                onClick={handleSync}
+                loading={syncing}
+                icon={<Icons.RefreshCw size={13} />}
+              >
+                {syncing ? 'Syncing...' : 'Sync Tracking'}
+              </Btn>
+              <Btn size="sm" onClick={openNewShipment} icon={<Icons.Plus size={13} />}>
+                Add Shipment
+              </Btn>
+            </>
           )}
           <Btn
             variant="secondary"
@@ -817,6 +874,64 @@ export default function Shipments() {
           </div>
         </div>
       )}
+
+      {/* Add Shipment Modal */}
+      <Modal open={showShipmentModal} onClose={() => setShowShipmentModal(false)} title="Add Shipment" width={520}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <Field
+            label="Tracking Number"
+            value={shipmentForm.tracking_number}
+            onChange={v => setShipmentForm(f => ({ ...f, tracking_number: v }))}
+            placeholder="e.g. SF1234567890"
+            required
+          />
+          <Select
+            label="Carrier"
+            value={shipmentForm.carrier}
+            onChange={v => setShipmentForm(f => ({ ...f, carrier: v }))}
+            options={CARRIER_OPTIONS}
+            placeholder="Select carrier..."
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0, columnGap: 12 }}>
+            <Field
+              label="Origin"
+              value={shipmentForm.origin}
+              onChange={v => setShipmentForm(f => ({ ...f, origin: v }))}
+              placeholder="e.g. Shenzhen, CN"
+            />
+            <Field
+              label="Destination"
+              value={shipmentForm.destination}
+              onChange={v => setShipmentForm(f => ({ ...f, destination: v }))}
+              placeholder="e.g. Los Angeles, US"
+            />
+          </div>
+          <Select
+            label="Order (optional)"
+            value={shipmentForm.order_id}
+            onChange={v => setShipmentForm(f => ({ ...f, order_id: v }))}
+            options={ordersList.map(o => ({ value: o.id, label: o.order_number || o.id }))}
+            placeholder="Link to an order..."
+          />
+          <Field
+            label="Notes"
+            value={shipmentForm.notes}
+            onChange={v => setShipmentForm(f => ({ ...f, notes: v }))}
+            placeholder="Optional notes..."
+          />
+
+          {shipmentError && (
+            <div style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, background: c.dangerMuted, color: c.danger, marginTop: 4 }}>
+              {shipmentError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+            <Btn variant="secondary" onClick={() => setShowShipmentModal(false)}>Cancel</Btn>
+            <Btn onClick={saveShipment} loading={shipmentSaving}>Add Shipment</Btn>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

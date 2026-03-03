@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  useColors, Card, SectionTitle, Btn, SearchInput, Badge, DateRangePicker,
-  useDateRange, Pagination, usePagination, useSort, SortHeader, Select,
-  formatUSD, formatDate, Icons, Loading, Empty,
+  useColors, Card, SectionTitle, Btn, Field, SearchInput, Badge, DateRangePicker,
+  useDateRange, Pagination, usePagination, useSort, SortHeader, Select, Textarea,
+  Modal, formatUSD, formatDate, Icons, Loading, Empty,
 } from '../components/UI'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -46,6 +46,17 @@ export default function Orders() {
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
 
+  // Manual order creation state
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [products, setProducts] = useState([])
+  const [orderForm, setOrderForm] = useState({
+    customer_name: '', customer_email: '', status: 'Pending',
+    payment_method: 'Credit Card', notes: '',
+    items: [{ product_id: '', quantity: 1, unit_price: '' }],
+  })
+  const [orderSaving, setOrderSaving] = useState(false)
+  const [orderError, setOrderError] = useState('')
+
   // Filter state
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -55,6 +66,12 @@ export default function Orders() {
 
   // Sort state
   const { sortField, sortDir, onSort } = useSort('created_at', 'desc')
+
+  // Load products for manual order form
+  useEffect(() => {
+    supabase.from('products').select('id, name, sku, price_usd').eq('active', true).order('name')
+      .then(({ data }) => setProducts(data || []))
+  }, [])
 
   // Load unique tags from orders
   useEffect(() => {
@@ -271,6 +288,93 @@ export default function Orders() {
     }
   }
 
+  // Manual order creation helpers
+  function openNewOrder() {
+    setOrderForm({
+      customer_name: '', customer_email: '', status: 'Pending',
+      payment_method: 'Credit Card', notes: '',
+      items: [{ product_id: '', quantity: 1, unit_price: '' }],
+    })
+    setOrderError('')
+    setShowOrderModal(true)
+  }
+
+  function addOrderItem() {
+    setOrderForm(f => ({ ...f, items: [...f.items, { product_id: '', quantity: 1, unit_price: '' }] }))
+  }
+
+  function removeOrderItem(idx) {
+    setOrderForm(f => ({ ...f, items: f.items.filter((_, i) => i !== idx) }))
+  }
+
+  function updateOrderItem(idx, field, value) {
+    setOrderForm(f => ({
+      ...f,
+      items: f.items.map((item, i) => i === idx ? { ...item, [field]: value } : item),
+    }))
+  }
+
+  function selectProduct(idx, productId) {
+    const product = products.find(p => p.id === productId)
+    setOrderForm(f => ({
+      ...f,
+      items: f.items.map((item, i) =>
+        i === idx ? { ...item, product_id: productId, unit_price: product?.price_usd ?? '' } : item
+      ),
+    }))
+  }
+
+  const orderSubtotal = orderForm.items.reduce((sum, item) => {
+    return sum + (parseFloat(item.unit_price) || 0) * (parseInt(item.quantity) || 0)
+  }, 0)
+
+  async function saveOrder() {
+    if (!orderForm.customer_name.trim()) { setOrderError('Customer name is required.'); return }
+    if (orderForm.items.length === 0 || !orderForm.items[0].product_id) { setOrderError('At least one item is required.'); return }
+    setOrderSaving(true)
+    setOrderError('')
+    try {
+      const orderNumber = `MAN-${Date.now().toString(36).toUpperCase()}`
+      const { data: newOrder, error: orderErr } = await supabase.from('orders').insert({
+        order_number: orderNumber,
+        customer_name: orderForm.customer_name.trim(),
+        customer_email: orderForm.customer_email.trim() || null,
+        status: orderForm.status,
+        financial_status: orderForm.status === 'Pending' ? 'Pending Payment' : 'Paid',
+        fulfillment_status: 'Unfulfilled',
+        payment_method: orderForm.payment_method,
+        notes: orderForm.notes.trim() || null,
+        subtotal: orderSubtotal,
+        total: orderSubtotal,
+        source: 'manual',
+        user_id: user?.id,
+      }).select('id').single()
+      if (orderErr) throw orderErr
+
+      for (const item of orderForm.items) {
+        if (!item.product_id) continue
+        const product = products.find(p => p.id === item.product_id)
+        await supabase.from('order_items').insert({
+          order_id: newOrder.id,
+          product_id: item.product_id,
+          sku: product?.sku || null,
+          name: product?.name || '',
+          quantity: parseInt(item.quantity) || 1,
+          unit_price: parseFloat(item.unit_price) || 0,
+          total: (parseFloat(item.unit_price) || 0) * (parseInt(item.quantity) || 1),
+        })
+      }
+
+      setShowOrderModal(false)
+      await loadOrders()
+    } catch (err) {
+      console.error('Save order failed:', err)
+      setOrderError(err.message || 'Failed to create order.')
+    } finally {
+      setOrderSaving(false)
+    }
+  }
+
   const filteredCount = filtered.length
 
   return (
@@ -293,15 +397,20 @@ export default function Orders() {
             onChange={setDateRange}
           />
           {!isViewer && (
-            <Btn
-              variant="secondary"
-              size="sm"
-              onClick={syncOrders}
-              loading={syncing}
-              icon={<Icons.RefreshCw size={13} />}
-            >
-              Sync Shopify
-            </Btn>
+            <>
+              <Btn
+                variant="secondary"
+                size="sm"
+                onClick={syncOrders}
+                loading={syncing}
+                icon={<Icons.RefreshCw size={13} />}
+              >
+                Sync Shopify
+              </Btn>
+              <Btn size="sm" onClick={openNewOrder} icon={<Icons.Plus size={13} />}>
+                New Order
+              </Btn>
+            </>
           )}
         </div>
       </div>
@@ -314,8 +423,14 @@ export default function Orders() {
             ? c.dangerMuted : c.successMuted,
           color: syncMsg.includes('failed') || syncMsg.includes('not configured') || syncMsg.includes('missing')
             ? c.danger : c.success,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
         }}>
-          {syncMsg}
+          <span>{syncMsg}</span>
+          {(syncMsg.includes('not configured') || syncMsg.includes('missing')) && (
+            <Btn size="sm" variant="secondary" onClick={() => navigate('/settings')} style={{ flexShrink: 0 }}>
+              Go to Settings
+            </Btn>
+          )}
         </div>
       )}
 
@@ -530,6 +645,119 @@ export default function Orders() {
           </div>
         </>
       )}
+
+      {/* Manual Order Modal */}
+      <Modal open={showOrderModal} onClose={() => setShowOrderModal(false)} title="New Order" width={640}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <SectionTitle style={{ marginBottom: 8 }}>Customer</SectionTitle>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0, columnGap: 12 }}>
+            <Field
+              label="Customer Name"
+              value={orderForm.customer_name}
+              onChange={v => setOrderForm(f => ({ ...f, customer_name: v }))}
+              placeholder="John Doe"
+              required
+            />
+            <Field
+              label="Customer Email"
+              value={orderForm.customer_email}
+              onChange={v => setOrderForm(f => ({ ...f, customer_email: v }))}
+              placeholder="john@example.com"
+              type="email"
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0, columnGap: 12 }}>
+            <Select
+              label="Status"
+              value={orderForm.status}
+              onChange={v => setOrderForm(f => ({ ...f, status: v }))}
+              options={['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']}
+            />
+            <Select
+              label="Payment Method"
+              value={orderForm.payment_method}
+              onChange={v => setOrderForm(f => ({ ...f, payment_method: v }))}
+              options={['Credit Card', 'Debit Card', 'PayPal', 'Shop Pay', 'Apple Pay', 'Bank Transfer']}
+            />
+          </div>
+
+          <Textarea
+            label="Notes"
+            value={orderForm.notes}
+            onChange={v => setOrderForm(f => ({ ...f, notes: v }))}
+            placeholder="Order notes..."
+            rows={2}
+          />
+
+          <SectionTitle style={{ marginBottom: 8, marginTop: 8 }}>Items</SectionTitle>
+          {orderForm.items.map((item, idx) => (
+            <div key={idx} style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr auto',
+              gap: 8, alignItems: 'end', marginBottom: 8,
+              padding: '10px 12px', background: c.surfaceHover, borderRadius: 8,
+            }}>
+              <Select
+                label={idx === 0 ? 'Product' : undefined}
+                value={item.product_id}
+                onChange={v => selectProduct(idx, v)}
+                options={products.map(p => ({ value: p.id, label: `${p.name}${p.sku ? ` (${p.sku})` : ''}` }))}
+                placeholder="Select product..."
+              />
+              <Field
+                label={idx === 0 ? 'Qty' : undefined}
+                type="number"
+                min="1"
+                step="1"
+                value={item.quantity}
+                onChange={v => updateOrderItem(idx, 'quantity', v)}
+                placeholder="1"
+              />
+              <Field
+                label={idx === 0 ? 'Unit Price' : undefined}
+                type="number"
+                min="0"
+                step="0.01"
+                value={item.unit_price}
+                onChange={v => updateOrderItem(idx, 'unit_price', v)}
+                placeholder="0.00"
+              />
+              {orderForm.items.length > 1 && (
+                <Btn variant="ghost" size="sm" onClick={() => removeOrderItem(idx)} style={{ color: c.danger, marginBottom: 12 }}>
+                  <Icons.Trash size={13} />
+                </Btn>
+              )}
+            </div>
+          ))}
+
+          <Btn variant="secondary" size="sm" onClick={addOrderItem} icon={<Icons.Plus size={13} />} style={{ alignSelf: 'flex-start' }}>
+            Add Item
+          </Btn>
+
+          {/* Totals */}
+          <div style={{
+            display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 12,
+            padding: '12px 16px', background: c.surfaceHover, borderRadius: 8,
+          }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ color: c.textSecondary, fontSize: 12, marginBottom: 2 }}>Subtotal</div>
+              <div style={{ color: c.text, fontSize: 16, fontWeight: 700 }}>{formatUSD(orderSubtotal)}</div>
+            </div>
+          </div>
+
+          {orderError && (
+            <div style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, background: c.dangerMuted, color: c.danger, marginTop: 4 }}>
+              {orderError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+            <Btn variant="secondary" onClick={() => setShowOrderModal(false)}>Cancel</Btn>
+            <Btn onClick={saveOrder} loading={orderSaving}>Create Order</Btn>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

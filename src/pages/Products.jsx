@@ -30,6 +30,8 @@ const emptyForm = () => ({
   country_of_origin: '',
   supplier_id: '',
   min_order_qty: '',
+  stock_quantity: '',
+  reorder_point: '',
   active: true,
 })
 
@@ -134,6 +136,8 @@ export default function Products() {
       country_of_origin: product.country_of_origin || '',
       supplier_id: product.supplier_id || '',
       min_order_qty: product.min_order_qty ?? '',
+      stock_quantity: product.stock_quantity ?? '',
+      reorder_point: product.reorder_point ?? '',
       active: product.active !== false,
     })
     setError('')
@@ -159,6 +163,8 @@ export default function Products() {
         country_of_origin: form.country_of_origin || null,
         supplier_id: form.supplier_id || null,
         min_order_qty: form.min_order_qty !== '' ? parseInt(form.min_order_qty) || null : null,
+        stock_quantity: form.stock_quantity !== '' ? parseInt(form.stock_quantity) || 0 : 0,
+        reorder_point: form.reorder_point !== '' ? parseInt(form.reorder_point) || 0 : 0,
         active: form.active,
       }
       if (editing) {
@@ -718,6 +724,35 @@ export default function Products() {
             />
           </div>
 
+          {/* Inventory */}
+          <SectionTitle style={{ marginBottom: 8 }}>Inventory</SectionTitle>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0, columnGap: 12 }}>
+            <Field
+              label="Initial Stock"
+              value={form.stock_quantity}
+              onChange={v => setForm(f => ({ ...f, stock_quantity: v }))}
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              readOnly={isViewer}
+              placeholder="0"
+              title="Current units available in your warehouse"
+            />
+            <Field
+              label="Reorder Point"
+              value={form.reorder_point}
+              onChange={v => setForm(f => ({ ...f, reorder_point: v }))}
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              readOnly={isViewer}
+              placeholder="0"
+              title="System will alert you when stock falls below this number"
+            />
+          </div>
+
           {/* Active Toggle */}
           <SectionTitle style={{ marginBottom: 8 }}>Status</SectionTitle>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -815,7 +850,7 @@ export default function Products() {
                 {row('Country of Origin', viewProduct.country_of_origin)}
                 {row('Weight', viewProduct.weight_kg != null ? `${viewProduct.weight_kg} kg` : '--')}
                 {row('Min Order Qty', viewProduct.min_order_qty != null ? String(viewProduct.min_order_qty) : '--')}
-                {row('Current Stock', viewProduct.stock_qty != null ? String(viewProduct.stock_qty) : '--')}
+                {row('Current Stock', viewProduct.stock_quantity != null ? String(viewProduct.stock_quantity) : '--')}
                 {row('Reorder Point', viewProduct.reorder_point != null ? String(viewProduct.reorder_point) : '--')}
               </div>
 

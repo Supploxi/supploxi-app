@@ -18,12 +18,14 @@ import {
 const PAGE_SIZE = 15
 
 const EXPENSE_CATEGORIES = [
+  'Freight & Shipping',
+  'Customs & Duties',
+  'Warehouse & Storage',
+  'Platform Fees',
   'Advertising',
-  'Software',
-  'Shipping Supplies',
-  'Warehouse',
-  'Payroll',
-  'Insurance',
+  'Software & Tools',
+  'Packaging Supplies',
+  'Returns & Refunds',
   'Other',
 ]
 

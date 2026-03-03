@@ -138,6 +138,12 @@ export default function Settings() {
     company_name: '', default_currency: 'USD', timezone: 'America/New_York',
   })
 
+  // Account / Profile
+  const [profileForm, setProfileForm] = useState({
+    full_name: '', timezone: 'America/New_York',
+  })
+  const [profileSaving, setProfileSaving] = useState(false)
+
   // Integrations
   const [testingShopify, setTestingShopify] = useState(false)
   const [shopifyResult, setShopifyResult] = useState(null)
@@ -174,7 +180,33 @@ export default function Settings() {
     } catch (e) {
       console.error('Failed to load settings:', e)
     }
+
+    // Initialize profile form
+    setProfileForm({
+      full_name: profile?.full_name || '',
+      timezone: profile?.timezone || general?.timezone || 'America/New_York',
+    })
+
     setLoading(false)
+  }
+
+  async function saveProfile() {
+    setProfileSaving(true)
+    setError('')
+    try {
+      const { error: err } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profileForm.full_name.trim(),
+          timezone: profileForm.timezone,
+        })
+        .eq('user_id', user?.id)
+      if (err) throw err
+      flash('Profile updated successfully.')
+    } catch (e) {
+      setError('Failed to update profile: ' + (e.message || 'Unknown error'))
+    }
+    setProfileSaving(false)
   }
 
   // ─── Save helpers ─────────────────────────────────────────────
@@ -390,25 +422,42 @@ export default function Settings() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Card>
-          <SectionTitle>Account Information</SectionTitle>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
+          <SectionTitle>Profile</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <Field
+              label="Full Name"
+              value={profileForm.full_name}
+              onChange={v => setProfileForm(f => ({ ...f, full_name: v }))}
+              placeholder="Your full name"
+            />
+            <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', color: c.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Email
               </label>
-              <div style={{ color: c.text, fontSize: 13 }}>{profile?.email || user?.email || '—'}</div>
+              <div style={{
+                padding: '8px 12px', fontSize: 13, borderRadius: 8,
+                background: c.surfaceHover, border: `1px solid ${c.border}`,
+                color: c.textSecondary, cursor: 'not-allowed',
+              }}>
+                {profile?.email || user?.email || '—'}
+              </div>
             </div>
-            <div>
-              <label style={{ display: 'block', color: c.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Name
-              </label>
-              <div style={{ color: c.text, fontSize: 13 }}>{profile?.full_name || '—'}</div>
-            </div>
-            <div>
+            <Select
+              label="Timezone"
+              value={profileForm.timezone}
+              onChange={v => setProfileForm(f => ({ ...f, timezone: v }))}
+              options={TIMEZONE_OPTIONS}
+            />
+            <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', color: c.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Role
               </label>
               <div style={{ color: c.text, fontSize: 13, textTransform: 'capitalize' }}>{role || '—'}</div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+              <Btn onClick={saveProfile} loading={profileSaving}>
+                Save Changes
+              </Btn>
             </div>
           </div>
         </Card>
