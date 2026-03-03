@@ -75,7 +75,7 @@ export default function Layout({ children }) {
               style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', display: 'block', flexShrink: 0 }}
             />
             <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: c.text, fontFamily: 'Inter, sans-serif' }}>
-              sup<span style={{ color: '#00d4aa' }}>p</span>loxi
+              Sup<span style={{ color: '#00d4aa' }}>p</span>loxi
             </span>
           </div>
         </div>
