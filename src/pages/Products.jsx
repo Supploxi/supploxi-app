@@ -49,7 +49,7 @@ function marginVariant(margin) {
 }
 
 export default function Products() {
-  const { isViewer } = useAuth()
+  const { user, isViewer } = useAuth()
   const c = useColors()
   const isMobile = useIsMobile()
 
@@ -64,7 +64,7 @@ export default function Products() {
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [viewProduct, setViewProduct] = useState(null)
-  const [toast, setToast] = useState('')
+  const [toast, setToast] = useState(null)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
 
@@ -185,14 +185,29 @@ export default function Products() {
     }
   }
 
+  function showToast(message, type = 'success') {
+    setToast({ message, type })
+  }
+
   async function handleDelete() {
     if (isViewer || !confirmDelete) return
-    const { error: delErr } = await supabase.from('products').delete().eq('id', confirmDelete.id)
-    if (!delErr) {
-      setProducts(arr => arr.filter(p => p.id !== confirmDelete.id))
-      setToast('Product deleted')
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', confirmDelete.id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      setProducts(prev => prev.filter(p => p.id !== confirmDelete.id))
+      setConfirmDelete(null)
+      showToast('Product deleted successfully', 'success')
+    } catch (err) {
+      console.error('Delete error:', err)
+      setConfirmDelete(null)
+      showToast('Failed to delete product: ' + err.message, 'error')
     }
-    setConfirmDelete(null)
   }
 
   async function syncShopify() {
@@ -822,11 +837,12 @@ export default function Products() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
-          background: c.success, color: '#fff', padding: '10px 20px',
+          background: toast.type === 'error' ? c.danger : c.success,
+          color: '#fff', padding: '10px 20px',
           borderRadius: 8, fontSize: 13, fontWeight: 600,
           boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
         }}>
-          {toast}
+          {toast.message}
         </div>
       )}
 
