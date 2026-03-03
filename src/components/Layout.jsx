@@ -74,26 +74,26 @@ export default function Layout({ children }) {
       {/* Sidebar */}
       <aside className={`sp-sidebar ${sidebarOpen ? 'sp-sidebar-open' : ''}`}>
         {/* Logo */}
-        <div style={{ padding: '20px 16px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: 'linear-gradient(135deg, #00d4aa 0%, #00a886 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 800, fontSize: 16, color: '#0a0c14',
-          }}>
-            S
-          </div>
-          <div>
-            <span style={{ color: c.text, fontSize: 16, fontWeight: 800, letterSpacing: '-0.02em' }}>Supploxi</span>
-            {subscriptionPlan && (
-              <span style={{
-                display: 'block', fontSize: 10, fontWeight: 600,
-                color: subscriptionStatus === 'trial' ? c.warning : c.accent,
-                textTransform: 'uppercase', letterSpacing: '0.05em',
-              }}>
-                {planLabel[subscriptionPlan] || subscriptionPlan}
+        <div style={{ padding: '20px 16px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px' }}>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="28" height="28" rx="8" fill="#00d4aa" fillOpacity="0.15"/>
+              <path d="M8 10.5C8 9.12 9.12 8 10.5 8h3.5a3.5 3.5 0 0 1 0 7h-2a1.5 1.5 0 0 0 0 3H16a.5.5 0 0 1 0 1h-1.5A3.5 3.5 0 0 1 11 15.5h2a1.5 1.5 0 0 0 0-3h-2.5A2.5 2.5 0 0 1 8 10.5z" fill="#00d4aa"/>
+            </svg>
+            <div>
+              <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em', color: c.text, fontFamily: 'Inter, sans-serif' }}>
+                Suppl<span style={{ color: '#00d4aa' }}>o</span>xi
               </span>
-            )}
+              {subscriptionPlan && (
+                <span style={{
+                  display: 'block', fontSize: 10, fontWeight: 600,
+                  color: subscriptionStatus === 'trial' ? c.warning : c.accent,
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                }}>
+                  {planLabel[subscriptionPlan] || subscriptionPlan}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

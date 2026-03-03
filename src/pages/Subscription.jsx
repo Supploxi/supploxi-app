@@ -279,6 +279,15 @@ export default function Subscription() {
                 }}>
                   {plan.description}
                 </p>
+                <div style={{
+                  marginTop: 8, padding: '4px 10px', borderRadius: 6,
+                  background: c.accentMuted, display: 'inline-block',
+                  fontSize: 11, fontWeight: 600, color: c.accent,
+                }}>
+                  {planKey === 'starter'
+                    ? '14-day free trial \u00B7 No credit card'
+                    : '14-day free trial \u00B7 Card required, not charged'}
+                </div>
               </div>
 
               {/* Price */}

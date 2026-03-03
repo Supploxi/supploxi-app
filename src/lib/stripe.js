@@ -57,10 +57,16 @@ export const PLANS = {
 
 // Create a checkout session via your backend
 export async function createCheckoutSession(plan, interval = 'monthly') {
+  const paymentMethodCollection = plan === 'starter' ? 'if_required' : 'always'
   const res = await fetch('/api/create-checkout-session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ plan, interval }),
+    body: JSON.stringify({
+      plan,
+      interval,
+      trial_period_days: 14,
+      payment_method_collection: paymentMethodCollection,
+    }),
   })
   if (!res.ok) throw new Error('Failed to create checkout session')
   const { sessionId } = await res.json()
