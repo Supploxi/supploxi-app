@@ -76,13 +76,13 @@ export default function Layout({ children }) {
         {/* Logo */}
         <div style={{ padding: '20px 16px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px' }}>
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="28" height="28" rx="8" fill="#00d4aa" fillOpacity="0.15"/>
-              <path d="M8 10.5C8 9.12 9.12 8 10.5 8h3.5a3.5 3.5 0 0 1 0 7h-2a1.5 1.5 0 0 0 0 3H16a.5.5 0 0 1 0 1h-1.5A3.5 3.5 0 0 1 11 15.5h2a1.5 1.5 0 0 0 0-3h-2.5A2.5 2.5 0 0 1 8 10.5z" fill="#00d4aa"/>
+            <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="30" height="30" rx="8" fill="#00d4aa"/>
+              <text x="15" y="21" textAnchor="middle" fill="black" fontSize="16" fontWeight="800" fontFamily="Inter, sans-serif">S</text>
             </svg>
             <div>
-              <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em', color: c.text, fontFamily: 'Inter, sans-serif' }}>
-                Suppl<span style={{ color: '#00d4aa' }}>o</span>xi
+              <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: c.text, fontFamily: 'Inter, sans-serif' }}>
+                Supploxi
               </span>
               {subscriptionPlan && (
                 <span style={{
