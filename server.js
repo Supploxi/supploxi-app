@@ -133,5 +133,25 @@ app.post('/webhook', async (req, res) => {
   res.json({ received: true })
 })
 
+// Serve frontend static files (Vite build output)
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+import { existsSync } from 'fs'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+const distPath = join(__dirname, 'dist')
+if (existsSync(distPath)) {
+  const { default: sirv } = await import('sirv')
+  app.use(sirv(distPath, { single: true }))
+} else {
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/webhook')) {
+      res.status(200).send('<h1>Building...</h1>')
+    }
+  })
+}
+
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))

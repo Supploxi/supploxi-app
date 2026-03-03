@@ -21,6 +21,7 @@
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1",
     "recharts": "^3.7.0",
+    "sirv": "^3.0.2",
     "stripe": "^20.4.0"
   },
   "devDependencies": {
