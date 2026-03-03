@@ -63,10 +63,19 @@ export default function Products() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [viewProduct, setViewProduct] = useState(null)
+  const [toast, setToast] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(''), 3000)
+      return () => clearTimeout(t)
+    }
+  }, [toast])
 
   async function load() {
     setLoading(true)
@@ -181,6 +190,7 @@ export default function Products() {
     const { error: delErr } = await supabase.from('products').delete().eq('id', confirmDelete.id)
     if (!delErr) {
       setProducts(arr => arr.filter(p => p.id !== confirmDelete.id))
+      setToast('Product deleted')
     }
     setConfirmDelete(null)
   }
@@ -302,9 +312,9 @@ export default function Products() {
                 return (
                   <tr
                     key={p.id}
-                    onClick={() => !isViewer ? openEdit(p) : undefined}
+                    onClick={() => setViewProduct(p)}
                     style={{
-                      cursor: isViewer ? 'default' : 'pointer',
+                      cursor: 'pointer',
                       opacity: p.active !== false ? 1 : 0.55,
                       transition: 'background 0.1s',
                     }}
@@ -376,11 +386,8 @@ export default function Products() {
                           <Btn variant="ghost" size="sm" onClick={() => openEdit(p)}>
                             <Icons.Edit size={13} />
                           </Btn>
-                          <Btn variant="ghost" size="sm" onClick={() => toggleActive(p)} title={p.active !== false ? 'Deactivate' : 'Activate'}>
-                            {p.active !== false
-                              ? <Icons.Eye size={13} />
-                              : <Icons.Eye size={13} style={{ opacity: 0.4 }} />
-                            }
+                          <Btn variant="ghost" size="sm" onClick={() => setViewProduct(p)} title="View details">
+                            <Icons.Eye size={13} />
                           </Btn>
                           <Btn variant="ghost" size="sm" onClick={() => setConfirmDelete(p)} style={{ color: c.danger }}>
                             <Icons.Trash size={13} />
@@ -407,9 +414,9 @@ export default function Products() {
           return (
             <Card
               key={p.id}
-              onClick={() => !isViewer ? openEdit(p) : undefined}
+              onClick={() => setViewProduct(p)}
               hover
-              style={{ opacity: p.active !== false ? 1 : 0.55, cursor: isViewer ? 'default' : 'pointer' }}
+              style={{ opacity: p.active !== false ? 1 : 0.55, cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
                 {p.image_url ? (
@@ -467,10 +474,8 @@ export default function Products() {
 
               {!isViewer && (
                 <div style={{ display: 'flex', gap: 6, marginTop: 4 }} onClick={e => e.stopPropagation()}>
+                  <Btn variant="ghost" size="sm" onClick={() => setViewProduct(p)}>View</Btn>
                   <Btn variant="secondary" size="sm" onClick={() => openEdit(p)}>Edit</Btn>
-                  <Btn variant="ghost" size="sm" onClick={() => toggleActive(p)}>
-                    {p.active !== false ? 'Deactivate' : 'Activate'}
-                  </Btn>
                   <Btn variant="ghost" size="sm" onClick={() => setConfirmDelete(p)} style={{ color: c.danger }}>
                     <Icons.Trash size={12} />
                   </Btn>
@@ -741,6 +746,89 @@ export default function Products() {
           </div>
         </div>
       </Modal>
+
+      {/* View Product Modal */}
+      <Modal open={!!viewProduct} onClose={() => setViewProduct(null)} title="Product Details" width={560}>
+        {viewProduct && (() => {
+          const vm = calcMargin(viewProduct.price_usd, viewProduct.unit_cost)
+          const row = (label, value, badge) => (
+            <div>
+              <div style={{ color: c.textSecondary, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</div>
+              {badge ? <Badge variant={badge}>{value}</Badge> : <div style={{ color: c.text, fontSize: 14, fontWeight: 500 }}>{value || '--'}</div>}
+            </div>
+          )
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Header: image + name + status */}
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                {viewProduct.image_url ? (
+                  <img src={viewProduct.image_url} alt={viewProduct.name}
+                    style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover', border: `1px solid ${c.border}`, background: c.surfaceHover }}
+                    onError={e => { e.target.style.display = 'none' }}
+                  />
+                ) : (
+                  <div style={{ width: 80, height: 80, borderRadius: 10, background: c.surfaceHover, border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.textMuted }}>
+                    <Icons.Package size={32} />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ color: c.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{viewProduct.name}</h3>
+                  {viewProduct.sku && <div style={{ color: c.textSecondary, fontSize: 13, fontFamily: 'monospace', marginTop: 4 }}>{viewProduct.sku}</div>}
+                  <div style={{ marginTop: 6 }}>
+                    <Badge variant={viewProduct.active !== false ? 'success' : 'muted'}>
+                      {viewProduct.active !== false ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {viewProduct.description && (
+                <p style={{ color: c.textSecondary, fontSize: 13, lineHeight: 1.6, margin: 0, padding: '8px 12px', background: c.surfaceHover, borderRadius: 8 }}>
+                  {viewProduct.description}
+                </p>
+              )}
+
+              {/* Detail grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+                {row('Category', viewProduct.category)}
+                {row('Supplier', viewProduct.supplier_id ? (supplierMap[viewProduct.supplier_id] || '--') : '--')}
+                {row('Unit Cost', viewProduct.unit_cost != null ? formatUSD(viewProduct.unit_cost) : '--')}
+                {row('Selling Price', viewProduct.price_usd != null ? formatUSD(viewProduct.price_usd) : '--')}
+                {row('Margin', vm !== null ? `${vm.toFixed(1)}%` : '--', vm !== null ? marginVariant(vm) : null)}
+                {row('HTS Code', viewProduct.hs_code)}
+                {row('Country of Origin', viewProduct.country_of_origin)}
+                {row('Weight', viewProduct.weight_kg != null ? `${viewProduct.weight_kg} kg` : '--')}
+                {row('Min Order Qty', viewProduct.min_order_qty != null ? String(viewProduct.min_order_qty) : '--')}
+                {row('Current Stock', viewProduct.stock_qty != null ? String(viewProduct.stock_qty) : '--')}
+                {row('Reorder Point', viewProduct.reorder_point != null ? String(viewProduct.reorder_point) : '--')}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                {!isViewer && (
+                  <Btn variant="secondary" onClick={() => { const p = viewProduct; setViewProduct(null); openEdit(p) }}>
+                    Edit Product
+                  </Btn>
+                )}
+                <Btn variant="ghost" onClick={() => setViewProduct(null)}>Close</Btn>
+              </div>
+            </div>
+          )
+        })()}
+      </Modal>
+
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          background: c.success, color: '#fff', padding: '10px 20px',
+          borderRadius: 8, fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+        }}>
+          {toast}
+        </div>
+      )}
 
       {/* Delete Confirmation */}
       <ConfirmModal
