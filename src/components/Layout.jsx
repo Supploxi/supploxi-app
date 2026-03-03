@@ -29,7 +29,7 @@ const NAV = [
 
 export default function Layout({ children }) {
   const { user, profile, role, hasAccess, signOut, subscriptionPlan, subscriptionStatus, trialDaysRemaining } = useAuth()
-  const { theme, toggle } = useTheme()
+  const { theme, toggleTheme } = useTheme()
   const c = useColors()
   const isMobile = useIsMobile()
   const navigate = useNavigate()
@@ -140,7 +140,7 @@ export default function Layout({ children }) {
         <div style={{ padding: '8px 12px 12px', borderTop: `1px solid ${c.border}` }}>
           {/* Theme toggle */}
           <button
-            onClick={toggle}
+            onClick={toggleTheme}
             className="sp-nav-item"
             style={{ marginBottom: 4 }}
           >

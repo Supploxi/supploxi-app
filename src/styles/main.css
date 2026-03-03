@@ -32,9 +32,34 @@ body {
 }
 
 /* ─── Dark Theme (default) ──────────────────────────────────── */
+[data-theme="dark"] {
+  --bg: #0a0c14;
+  --surface: #0d1117;
+  --surface2: #161b22;
+  --text: #e6edf3;
+  --text-muted: #64748b;
+  --text-dim: #8b949e;
+  --border: rgba(255,255,255,0.06);
+  --accent: #00d4aa;
+  --accent-hover: #00eabb;
+}
+
 [data-theme="dark"] body {
   background: #0a0c14;
   color: #e6edf3;
+}
+
+/* ─── Light Theme ──────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f8fafc;
+  --surface2: #f3f4f6;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-dim: #656d76;
+  --border: rgba(0,0,0,0.08);
+  --accent: #00b894;
+  --accent-hover: #00b37e;
 }
 
 [data-theme="light"] body {

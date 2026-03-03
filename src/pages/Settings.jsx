@@ -7,16 +7,28 @@ import { testShopifyConnection } from '../lib/shopify'
 
 // ─── Constants ──────────────────────────────────────────────────
 
-const TAB_INTEGRATIONS = 'integrations'
+const TAB_GENERAL = 'general'
+const TAB_ACCOUNT = 'account'
 const TAB_TEAM = 'team'
 const TAB_GATEWAY = 'gateway'
-const TAB_GENERAL = 'general'
+const TAB_INTEGRATIONS = 'integrations'
+const TAB_WEBHOOKS = 'webhooks'
+const TAB_SYNC = 'sync'
+const TAB_REPORTS = 'reports'
+const TAB_TAGS = 'tags'
+const TAB_DANGER = 'danger'
 
 const ALL_TABS = [
-  { value: TAB_INTEGRATIONS, label: 'Integrations' },
-  { value: TAB_TEAM, label: 'Team' },
-  { value: TAB_GATEWAY, label: 'Gateway Fees' },
   { value: TAB_GENERAL, label: 'General' },
+  { value: TAB_ACCOUNT, label: 'Account' },
+  { value: TAB_TEAM, label: 'Team' },
+  { value: TAB_GATEWAY, label: 'Payment Gateways' },
+  { value: TAB_INTEGRATIONS, label: 'Integrations' },
+  { value: TAB_WEBHOOKS, label: 'Webhooks' },
+  { value: TAB_SYNC, label: 'Sync' },
+  { value: TAB_REPORTS, label: 'Reports' },
+  { value: TAB_TAGS, label: 'Manage Tags' },
+  { value: TAB_DANGER, label: 'Danger Zone' },
 ]
 
 const PERMISSION_MODULES = [
@@ -91,6 +103,26 @@ function SecretField({ label, value, onChange, placeholder, disabled }) {
   )
 }
 
+// ─── Coming Soon Card ─────────────────────────────────────────
+
+function ComingSoonCard({ title, description }) {
+  const c = useColors()
+  return (
+    <div style={{
+      background: c.surface, border: `1px solid ${c.border}`, borderRadius: 12,
+      padding: '20px 24px', opacity: 0.6,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ color: c.text, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{title}</div>
+          <div style={{ color: c.textMuted, fontSize: 12 }}>{description}</div>
+        </div>
+        <Badge variant="default">Coming Soon</Badge>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Component ─────────────────────────────────────────────
 
 export default function Settings() {
@@ -102,15 +134,13 @@ export default function Settings() {
 
   // ─── State ───────────────────────────────────────────────────
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState(TAB_INTEGRATIONS)
+  const [activeTab, setActiveTab] = useState(TAB_GENERAL)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
 
   // Settings data (loaded from supabase 'settings' table as key-value JSON)
   const [shopify, setShopify] = useState({ shop_url: '', access_token: '' })
-  const [track17, setTrack17] = useState({ api_key: '' })
-  const [resend, setResend] = useState({ api_key: '', sender_email: '' })
   const [gatewayFees, setGatewayFees] = useState({
     shopify_payments: '', paypal: '', credit_card: '', manual: '',
   })
@@ -144,12 +174,6 @@ export default function Settings() {
 
       if (map.shopify) {
         try { setShopify(typeof map.shopify === 'string' ? JSON.parse(map.shopify) : map.shopify) } catch {}
-      }
-      if (map.track17) {
-        try { setTrack17(typeof map.track17 === 'string' ? JSON.parse(map.track17) : map.track17) } catch {}
-      }
-      if (map.resend) {
-        try { setResend(typeof map.resend === 'string' ? JSON.parse(map.resend) : map.resend) } catch {}
       }
       if (map.gateway_fees) {
         try { setGatewayFees(typeof map.gateway_fees === 'string' ? JSON.parse(map.gateway_fees) : map.gateway_fees) } catch {}
@@ -327,138 +351,75 @@ export default function Settings() {
     ? ALL_TABS
     : ALL_TABS.filter(t => t.value !== TAB_TEAM)
 
-  // ─── Integrations Tab ────────────────────────────────────────
+  // ─── General Tab ──────────────────────────────────────────────
 
-  function renderIntegrations() {
+  function renderGeneral() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-        {/* Shopify */}
         <Card>
-          <SectionTitle>Shopify</SectionTitle>
+          <SectionTitle>Company Details</SectionTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div style={{
-              background: c.infoMuted, border: `1px solid ${c.info}30`, borderRadius: 8,
-              padding: '10px 12px', fontSize: 12, color: c.textSecondary, marginBottom: 12, lineHeight: 1.5,
-            }}>
-              Connect your Shopify store to sync orders, products, and inventory automatically.
-              You will need a custom app with read/write access to orders and products.
-            </div>
             <Field
-              label="Shop URL"
-              value={shopify.shop_url}
-              onChange={v => setShopify(s => ({ ...s, shop_url: v }))}
-              placeholder="your-store.myshopify.com"
+              label="Company Name"
+              value={general.company_name}
+              onChange={v => setGeneral(g => ({ ...g, company_name: v }))}
+              placeholder="Your Company LLC"
               disabled={isViewer}
               readOnly={isViewer}
             />
-            <SecretField
-              label="Access Token"
-              value={shopify.access_token}
-              onChange={v => setShopify(s => ({ ...s, access_token: v }))}
-              placeholder="shpat_..."
+            <Select
+              label="Default Currency"
+              value={general.default_currency}
+              onChange={v => setGeneral(g => ({ ...g, default_currency: v }))}
+              options={CURRENCY_OPTIONS}
               disabled={isViewer}
             />
-            {shopifyResult && (
-              <div style={{
-                background: c.successMuted, border: `1px solid ${c.success}30`, borderRadius: 8,
-                padding: '10px 12px', fontSize: 12, color: c.success, marginBottom: 12,
-              }}>
-                Connected to: {shopifyResult.name || shopifyResult.domain || 'Shopify store'}
-                {shopifyResult.plan_name && ` (${shopifyResult.plan_name})`}
-              </div>
-            )}
+            <Select
+              label="Timezone"
+              value={general.timezone}
+              onChange={v => setGeneral(g => ({ ...g, timezone: v }))}
+              options={TIMEZONE_OPTIONS}
+              disabled={isViewer}
+            />
             {!isViewer && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <Btn
-                  variant="outline"
-                  onClick={handleTestShopify}
-                  loading={testingShopify}
-                  disabled={!shopify.shop_url || !shopify.access_token}
-                >
-                  Test Connection
-                </Btn>
-                <Btn
-                  onClick={() => saveSetting('shopify', shopify)}
-                  loading={saving}
-                  disabled={!shopify.shop_url || !shopify.access_token}
-                >
-                  Save
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                <Btn onClick={() => saveSetting('general', general)} loading={saving}>
+                  Save General Settings
                 </Btn>
               </div>
             )}
           </div>
         </Card>
+      </div>
+    )
+  }
 
-        {/* 17Track */}
-        <Card>
-          <SectionTitle>17Track -- Shipment Tracking</SectionTitle>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div style={{
-              background: c.infoMuted, border: `1px solid ${c.info}30`, borderRadius: 8,
-              padding: '10px 12px', fontSize: 12, color: c.textSecondary, marginBottom: 12, lineHeight: 1.5,
-            }}>
-              17Track provides real-time tracking updates for shipments from China. Enter your API key
-              to enable automatic tracking registration and status updates.
-            </div>
-            <SecretField
-              label="API Key"
-              value={track17.api_key}
-              onChange={v => setTrack17(s => ({ ...s, api_key: v }))}
-              placeholder="Your 17Track API key"
-              disabled={isViewer}
-            />
-            {!isViewer && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <Btn
-                  onClick={() => saveSetting('track17', track17)}
-                  loading={saving}
-                  disabled={!track17.api_key}
-                >
-                  Save
-                </Btn>
-              </div>
-            )}
-          </div>
-        </Card>
+  // ─── Account Tab ──────────────────────────────────────────────
 
-        {/* Resend */}
+  function renderAccount() {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Card>
-          <SectionTitle>Resend -- Transactional Email</SectionTitle>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div style={{
-              background: c.infoMuted, border: `1px solid ${c.info}30`, borderRadius: 8,
-              padding: '10px 12px', fontSize: 12, color: c.textSecondary, marginBottom: 12, lineHeight: 1.5,
-            }}>
-              Resend is used for sending order confirmations, shipping notifications, and team invitations.
-              Create an API key at resend.com and configure your verified sender email.
+          <SectionTitle>Account Information</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', color: c.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Email
+              </label>
+              <div style={{ color: c.text, fontSize: 13 }}>{profile?.email || user?.email || '—'}</div>
             </div>
-            <SecretField
-              label="API Key"
-              value={resend.api_key}
-              onChange={v => setResend(s => ({ ...s, api_key: v }))}
-              placeholder="re_..."
-              disabled={isViewer}
-            />
-            <Field
-              label="Sender Email"
-              value={resend.sender_email}
-              onChange={v => setResend(s => ({ ...s, sender_email: v }))}
-              placeholder="notifications@yourdomain.com"
-              disabled={isViewer}
-              readOnly={isViewer}
-            />
-            {!isViewer && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <Btn
-                  onClick={() => saveSetting('resend', resend)}
-                  loading={saving}
-                  disabled={!resend.api_key}
-                >
-                  Save
-                </Btn>
-              </div>
-            )}
+            <div>
+              <label style={{ display: 'block', color: c.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Name
+              </label>
+              <div style={{ color: c.text, fontSize: 13 }}>{profile?.full_name || '—'}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: c.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Role
+              </label>
+              <div style={{ color: c.text, fontSize: 13, textTransform: 'capitalize' }}>{role || '—'}</div>
+            </div>
           </div>
         </Card>
       </div>
@@ -771,57 +732,136 @@ export default function Settings() {
     )
   }
 
-  // ─── General Tab ──────────────────────────────────────────────
+  // ─── Integrations Tab ────────────────────────────────────────
 
-  function renderGeneral() {
+  function renderIntegrations() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Shopify */}
         <Card>
-          <SectionTitle>Company Details</SectionTitle>
+          <SectionTitle>Shopify</SectionTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div style={{
+              background: c.infoMuted, border: `1px solid ${c.info}30`, borderRadius: 8,
+              padding: '10px 12px', fontSize: 12, color: c.textSecondary, marginBottom: 12, lineHeight: 1.5,
+            }}>
+              Connect your Shopify store to sync orders, products, and inventory automatically.
+              You will need a custom app with read/write access to orders and products.
+            </div>
             <Field
-              label="Company Name"
-              value={general.company_name}
-              onChange={v => setGeneral(g => ({ ...g, company_name: v }))}
-              placeholder="Your Company LLC"
+              label="Shop URL"
+              value={shopify.shop_url}
+              onChange={v => setShopify(s => ({ ...s, shop_url: v }))}
+              placeholder="your-store.myshopify.com"
               disabled={isViewer}
               readOnly={isViewer}
             />
-            <Select
-              label="Default Currency"
-              value={general.default_currency}
-              onChange={v => setGeneral(g => ({ ...g, default_currency: v }))}
-              options={CURRENCY_OPTIONS}
+            <SecretField
+              label="Access Token"
+              value={shopify.access_token}
+              onChange={v => setShopify(s => ({ ...s, access_token: v }))}
+              placeholder="shpat_..."
               disabled={isViewer}
             />
-            <Select
-              label="Timezone"
-              value={general.timezone}
-              onChange={v => setGeneral(g => ({ ...g, timezone: v }))}
-              options={TIMEZONE_OPTIONS}
-              disabled={isViewer}
-            />
+            {shopifyResult && (
+              <div style={{
+                background: c.successMuted, border: `1px solid ${c.success}30`, borderRadius: 8,
+                padding: '10px 12px', fontSize: 12, color: c.success, marginBottom: 12,
+              }}>
+                Connected to: {shopifyResult.name || shopifyResult.domain || 'Shopify store'}
+                {shopifyResult.plan_name && ` (${shopifyResult.plan_name})`}
+              </div>
+            )}
             {!isViewer && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-                <Btn onClick={() => saveSetting('general', general)} loading={saving}>
-                  Save General Settings
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <Btn
+                  variant="outline"
+                  onClick={handleTestShopify}
+                  loading={testingShopify}
+                  disabled={!shopify.shop_url || !shopify.access_token}
+                >
+                  Test Connection
+                </Btn>
+                <Btn
+                  onClick={() => saveSetting('shopify', shopify)}
+                  loading={saving}
+                  disabled={!shopify.shop_url || !shopify.access_token}
+                >
+                  Save
                 </Btn>
               </div>
             )}
           </div>
         </Card>
+
+        {/* Coming Soon platforms */}
+        <ComingSoonCard title="BigCommerce" description="Sync orders and products from your BigCommerce store." />
+        <ComingSoonCard title="WooCommerce" description="Connect your WooCommerce store for order and inventory sync." />
+        <ComingSoonCard title="Squarespace" description="Import orders and products from Squarespace Commerce." />
+        <ComingSoonCard title="Wix" description="Sync your Wix e-commerce store with Supploxi." />
+
+        {/* Help text */}
+        <div style={{
+          textAlign: 'center', padding: '16px 0', fontSize: 13, color: c.textMuted,
+        }}>
+          Need help integrating your platform? Contact us at{' '}
+          <a href="mailto:support@supploxi.com" style={{ color: c.accent, fontWeight: 600 }}>
+            support@supploxi.com
+          </a>
+        </div>
       </div>
     )
+  }
+
+  // ─── Placeholder tabs ─────────────────────────────────────────
+
+  function renderComingSoon(title, description) {
+    return (
+      <Card>
+        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div style={{ color: c.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{title}</div>
+          <div style={{ color: c.textMuted, fontSize: 14, maxWidth: 400, margin: '0 auto' }}>{description}</div>
+          <Badge variant="default" style={{ marginTop: 16 }}>Coming Soon</Badge>
+        </div>
+      </Card>
+    )
+  }
+
+  function renderWebhooks() {
+    return renderComingSoon('Webhooks', 'Configure webhook endpoints to receive real-time notifications about events in your account.')
+  }
+
+  function renderSync() {
+    return renderComingSoon('Sync', 'Manage data synchronization settings between Supploxi and your connected platforms.')
+  }
+
+  function renderReports() {
+    return renderComingSoon('Reports', 'Configure automated reports and export schedules for your business data.')
+  }
+
+  function renderTags() {
+    return renderComingSoon('Manage Tags', 'Create and organize custom tags to categorize your suppliers, products, and orders.')
+  }
+
+  function renderDanger() {
+    return renderComingSoon('Danger Zone', 'Account deletion and data export options will be available here.')
   }
 
   // ─── Tab content router ───────────────────────────────────────
 
   function renderActiveTab() {
     switch (activeTab) {
-      case TAB_INTEGRATIONS: return renderIntegrations()
+      case TAB_GENERAL:      return renderGeneral()
+      case TAB_ACCOUNT:      return renderAccount()
       case TAB_TEAM:         return renderTeam()
       case TAB_GATEWAY:      return renderGatewayFees()
-      case TAB_GENERAL:      return renderGeneral()
+      case TAB_INTEGRATIONS: return renderIntegrations()
+      case TAB_WEBHOOKS:     return renderWebhooks()
+      case TAB_SYNC:         return renderSync()
+      case TAB_REPORTS:      return renderReports()
+      case TAB_TAGS:         return renderTags()
+      case TAB_DANGER:       return renderDanger()
       default:               return null
     }
   }
