@@ -38,7 +38,7 @@ const FAQ_ITEMS = [
 
 export default function Subscription() {
   const c = useColors()
-  const { subscriptionPlan, subscriptionStatus, trialDaysRemaining, profile } = useAuth()
+  const { user, subscriptionPlan, subscriptionStatus, trialDaysRemaining, profile } = useAuth()
   const isMobile = useIsMobile()
 
   const [interval, setInterval] = useState('monthly')
@@ -59,7 +59,7 @@ export default function Subscription() {
     setError(null)
     setLoadingPlan(planKey)
     try {
-      await createCheckoutSession(planKey, interval)
+      await createCheckoutSession(planKey, interval, user?.id, user?.email)
     } catch (err) {
       setError(err.message || 'Failed to start checkout. Please try again.')
     } finally {
@@ -71,7 +71,7 @@ export default function Subscription() {
     setError(null)
     setPortalLoading(true)
     try {
-      await createPortalSession()
+      await createPortalSession(user?.id)
     } catch (err) {
       setError(err.message || 'Failed to open billing portal. Please try again.')
     } finally {

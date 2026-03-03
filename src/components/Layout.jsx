@@ -72,10 +72,10 @@ export default function Layout({ children }) {
             <img
               src="/logo.png"
               alt="Supploxi"
-              style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }}
+              style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'contain', background: '#00d4aa', padding: 2 }}
             />
             <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: c.text, fontFamily: 'Inter, sans-serif' }}>
-              Suppl<span style={{ color: '#00d4aa' }}>o</span>xi
+              Su<span style={{ color: '#00d4aa' }}>pp</span>loxi
             </span>
           </div>
         </div>

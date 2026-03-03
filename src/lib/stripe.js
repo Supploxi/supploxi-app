@@ -1,16 +1,6 @@
 // Stripe integration for subscription management
 
-import { loadStripe } from '@stripe/stripe-js'
-
-const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
-
-let stripePromise = null
-export function getStripe() {
-  if (!stripePromise && STRIPE_KEY) {
-    stripePromise = loadStripe(STRIPE_KEY)
-  }
-  return stripePromise
-}
+const API_URL = 'https://app.supploxi.com'
 
 // Subscription plans
 export const PLANS = {
@@ -55,48 +45,43 @@ export const PLANS = {
   },
 }
 
-// Create a checkout session via your backend
-export async function createCheckoutSession(plan, interval = 'monthly') {
-  const paymentMethodCollection = plan === 'starter' ? 'if_required' : 'always'
-  const res = await fetch('/api/create-checkout-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      plan,
-      interval,
-      trial_period_days: 14,
-      payment_method_collection: paymentMethodCollection,
-    }),
-  })
-  if (!res.ok) throw new Error('Failed to create checkout session')
-  const { sessionId } = await res.json()
-
-  const stripe = await getStripe()
-  if (!stripe) throw new Error('Stripe not initialized')
-
-  const { error } = await stripe.redirectToCheckout({ sessionId })
-  if (error) throw error
+const priceMap = {
+  starter: {
+    monthly: 'price_1T6vGBJDNMtBbglVaRq3E8NE',
+    annual: 'price_1T6vGBJDNMtBbglV7Mh2YOSL',
+  },
+  growth: {
+    monthly: 'price_1T6vKDJDNMtBbglVgbg2APTq',
+    annual: 'price_1T6vKDJDNMtBbglVe65kShxP',
+  },
+  scale: {
+    monthly: 'price_1T6vLfJDNMtBbglV4RAbg1r4',
+    annual: 'price_1T6vLfJDNMtBbglV51rpZDMe',
+  },
 }
 
-// Create a portal session for managing subscription
-export async function createPortalSession() {
-  const res = await fetch('/api/create-portal-session', {
+export const createCheckoutSession = async (plan, interval, userId, userEmail) => {
+  const priceId = priceMap[plan]?.[interval]
+  if (!priceId) throw new Error('Invalid plan or interval')
+  const res = await fetch(`${API_URL}/api/create-checkout-session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ priceId, userId, userEmail, plan, interval }),
   })
-  if (!res.ok) throw new Error('Failed to create portal session')
-  const { url } = await res.json()
-  window.location.href = url
+  const data = await res.json()
+  if (data.url) window.location.href = data.url
+  else throw new Error(data.error || 'Failed to create checkout session')
 }
 
-// Get current subscription details
-export async function getSubscription() {
-  const res = await fetch('/api/subscription', {
-    method: 'GET',
+export const createPortalSession = async (userId) => {
+  const res = await fetch(`${API_URL}/api/create-portal-session`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
   })
-  if (!res.ok) throw new Error('Failed to fetch subscription')
-  return await res.json()
+  const data = await res.json()
+  if (data.url) window.location.href = data.url
+  else throw new Error(data.error || 'Failed to create portal session')
 }
 
 // Format price for display
