@@ -224,13 +224,8 @@ export default function Suppliers() {
         if (updErr) throw updErr
       } else {
         payload.user_id = user?.id
-        console.log('INSERT payload:', JSON.stringify(payload))
-        console.log('user object:', JSON.stringify(user))
         const { error: insErr } = await supabase.from('suppliers').insert(payload)
-        if (insErr) {
-          console.log('INSERT error:', JSON.stringify(insErr))
-          throw insErr
-        }
+        if (insErr) throw insErr
       }
       await load()
       setShowModal(false)

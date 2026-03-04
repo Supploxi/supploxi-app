@@ -241,6 +241,7 @@ export default function Inventory() {
         quantity: qty,
         notes: adjustForm.notes.trim() || null,
         created_at: new Date().toISOString(),
+        user_id: user?.id,
       }
 
       const { error: insErr } = await supabase
@@ -296,6 +297,7 @@ export default function Inventory() {
         quantity: qty,
         notes: addForm.notes.trim() || null,
         created_at: new Date().toISOString(),
+        user_id: user?.id,
       }
 
       const { error: insErr } = await supabase

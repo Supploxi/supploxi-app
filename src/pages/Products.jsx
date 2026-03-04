@@ -159,8 +159,14 @@ export default function Products() {
         const { error: updErr } = await supabase.from('products').update(payload).eq('id', editing.id)
         if (updErr) throw updErr
       } else {
+        payload.user_id = user?.id
+        console.log('INSERT payload:', JSON.stringify(payload))
+        console.log('user object:', JSON.stringify(user))
         const { error: insErr } = await supabase.from('products').insert(payload)
-        if (insErr) throw insErr
+        if (insErr) {
+          console.log('INSERT error:', JSON.stringify(insErr))
+          throw insErr
+        }
       }
       await load()
       setShowModal(false)
@@ -269,6 +275,7 @@ export default function Products() {
         if (existing) {
           await supabase.from('products').update(row).eq('id', existing.id)
         } else {
+          row.user_id = user?.id
           await supabase.from('products').insert(row)
         }
         upserted++
