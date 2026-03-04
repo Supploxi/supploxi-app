@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   useColors, Card, SectionTitle, Btn, SearchInput, Badge, DateRangePicker,
   useDateRange, Pagination, usePagination, useSort, SortHeader, Select,
-  formatUSD, formatDate, Icons, Loading, Empty,
+  ConfirmModal, formatUSD, formatDate, Icons, Loading, Empty,
 } from '../components/UI'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -45,6 +45,7 @@ export default function PurchaseOrders() {
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   // Filter state
   const [search, setSearch] = useState('')
@@ -180,6 +181,29 @@ export default function PurchaseOrders() {
     }
   }
 
+  async function handleDelete() {
+    if (!confirmDelete) return
+    try {
+      await supabase
+        .from('purchase_order_items')
+        .delete()
+        .eq('purchase_order_id', confirmDelete.id)
+
+      const { error } = await supabase
+        .from('purchase_orders')
+        .delete()
+        .eq('id', confirmDelete.id)
+        .eq('user_id', user?.id)
+
+      if (error) throw error
+      setPurchaseOrders(prev => prev.filter(p => p.id !== confirmDelete.id))
+    } catch (e) {
+      console.error('Failed to delete purchase order:', e.message)
+    } finally {
+      setConfirmDelete(null)
+    }
+  }
+
   const filteredCount = filtered.length
 
   return (
@@ -299,11 +323,20 @@ export default function PurchaseOrders() {
                     <span style={{ color: c.textMuted, fontSize: 12 }}>
                       {formatDate(po.created_at)}
                     </span>
-                    {po.expected_delivery && (
-                      <span style={{ color: c.textSecondary, fontSize: 11 }}>
-                        ETA: {formatDate(po.expected_delivery)}
-                      </span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {po.expected_delivery && (
+                        <span style={{ color: c.textSecondary, fontSize: 11 }}>
+                          ETA: {formatDate(po.expected_delivery)}
+                        </span>
+                      )}
+                      {!isViewer && (
+                        <span onClick={e => e.stopPropagation()}>
+                          <Btn variant="ghost" size="sm" onClick={() => setConfirmDelete(po)} style={{ color: c.danger, padding: 4 }}>
+                            <Icons.Trash size={13} />
+                          </Btn>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -326,6 +359,13 @@ export default function PurchaseOrders() {
                     <SortHeader label="Total" field="total_value" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Expected Delivery" field="expected_delivery" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Created" field="created_at" sortField={sortField} sortDir={sortDir} onSort={onSort} />
+                    {!isViewer && (
+                      <th style={{
+                        padding: '8px 12px', textAlign: 'center', fontSize: 11, fontWeight: 600,
+                        color: c.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em',
+                        borderBottom: `2px solid ${c.border}`, whiteSpace: 'nowrap',
+                      }} />
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -376,6 +416,13 @@ export default function PurchaseOrders() {
                           {formatDate(po.created_at)}
                         </span>
                       </td>
+                      {!isViewer && (
+                        <td style={{ padding: '12px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                          <Btn variant="ghost" size="sm" onClick={() => setConfirmDelete(po)} style={{ color: c.danger }}>
+                            <Icons.Trash size={13} />
+                          </Btn>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -399,6 +446,15 @@ export default function PurchaseOrders() {
           </div>
         </>
       )}
+      <ConfirmModal
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Purchase Order"
+        message={`Are you sure you want to delete "${confirmDelete?.po_number}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }
