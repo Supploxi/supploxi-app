@@ -64,7 +64,7 @@ export default function PurchaseOrders() {
     try {
       let query = supabase
         .from('purchase_orders')
-        .select('*, suppliers(name)', { count: 'exact' })
+        .select('*, suppliers(company_name)', { count: 'exact' })
         .order(sortField || 'created_at', { ascending: sortDir === 'asc' })
 
       if (dateRange.from) {
@@ -97,7 +97,7 @@ export default function PurchaseOrders() {
       const q = search.toLowerCase().trim()
       result = result.filter(po =>
         (po.po_number || '').toLowerCase().includes(q) ||
-        (po.suppliers?.name || '').toLowerCase().includes(q)
+        (po.suppliers?.company_name || '').toLowerCase().includes(q)
       )
     }
 
@@ -116,8 +116,8 @@ export default function PurchaseOrders() {
       let va, vb
       // Handle joined supplier name sort
       if (sortField === 'supplier_name') {
-        va = a.suppliers?.name
-        vb = b.suppliers?.name
+        va = a.suppliers?.company_name
+        vb = b.suppliers?.company_name
       } else {
         va = a[sortField]
         vb = b[sortField]
@@ -163,6 +163,8 @@ export default function PurchaseOrders() {
         .insert({
           po_number: poNumber,
           status: 'Draft',
+          order_date: new Date().toISOString().slice(0, 10),
+          payment_status: 'unpaid',
           user_id: user?.id,
         })
         .select('id')
@@ -283,14 +285,14 @@ export default function PurchaseOrders() {
                     </Badge>
                   </div>
                   <div style={{ color: c.text, fontSize: 14, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {po.suppliers?.name || '--'}
+                    {po.suppliers?.company_name || '--'}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <span style={{ color: c.textSecondary, fontSize: 12 }}>
                       {po.item_count != null ? `${po.item_count} item${po.item_count !== 1 ? 's' : ''}` : '--'}
                     </span>
                     <span style={{ color: c.text, fontWeight: 700, fontSize: 15 }}>
-                      {formatUSD(po.total)}
+                      {formatUSD(po.total_value)}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -321,7 +323,7 @@ export default function PurchaseOrders() {
                     <SortHeader label="Supplier" field="supplier_name" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Items" field="item_count" sortField={sortField} sortDir={sortDir} onSort={onSort} />
-                    <SortHeader label="Total" field="total" sortField={sortField} sortDir={sortDir} onSort={onSort} />
+                    <SortHeader label="Total" field="total_value" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Expected Delivery" field="expected_delivery" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Created" field="created_at" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                   </tr>
@@ -346,7 +348,7 @@ export default function PurchaseOrders() {
                       </td>
                       <td style={{ padding: '12px', maxWidth: 220 }}>
                         <div style={{ color: c.text, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {po.suppliers?.name || '--'}
+                          {po.suppliers?.company_name || '--'}
                         </div>
                       </td>
                       <td style={{ padding: '12px' }}>
@@ -361,7 +363,7 @@ export default function PurchaseOrders() {
                       </td>
                       <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
                         <span style={{ color: c.text, fontWeight: 600, fontSize: 13 }}>
-                          {formatUSD(po.total)}
+                          {formatUSD(po.total_value)}
                         </span>
                       </td>
                       <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>

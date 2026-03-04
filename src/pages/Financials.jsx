@@ -39,7 +39,6 @@ const EMPTY_EXPENSE = {
   description: '',
   amount: '',
   date: '',
-  recurring: false,
 }
 
 export default function Financials() {
@@ -219,7 +218,6 @@ export default function Financials() {
       description: expense.description || '',
       amount: expense.amount != null ? String(expense.amount) : '',
       date: expense.date || '',
-      recurring: !!expense.recurring,
     })
     setExpenseError('')
     setExpenseModal(true)
@@ -246,7 +244,6 @@ export default function Financials() {
         description: expenseForm.description.trim(),
         amount: parseFloat(expenseForm.amount),
         date: expenseForm.date,
-        recurring: expenseForm.recurring,
         user_id: user?.id,
       }
 
@@ -746,19 +743,9 @@ export default function Financials() {
                   </p>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: c.textMuted, fontSize: 11 }}>
-                      {formatDate(expense.date)}
-                    </span>
-                    {expense.recurring && (
-                      <span style={{
-                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
-                        borderRadius: 4, background: c.infoMuted, color: c.info,
-                      }}>
-                        Recurring
-                      </span>
-                    )}
-                  </div>
+                  <span style={{ color: c.textMuted, fontSize: 11 }}>
+                    {formatDate(expense.date)}
+                  </span>
                   {!isViewer && (
                     <div style={{ display: 'flex', gap: 4 }}>
                       <Btn variant="ghost" size="sm" onClick={() => openEditExpense(expense)}>
@@ -799,11 +786,6 @@ export default function Financials() {
                     color: c.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em',
                     borderBottom: `2px solid ${c.border}`,
                   }}>Date</th>
-                  <th style={{
-                    padding: '8px 12px', textAlign: 'center', fontSize: 11, fontWeight: 600,
-                    color: c.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em',
-                    borderBottom: `2px solid ${c.border}`,
-                  }}>Recurring</th>
                   {!isViewer && (
                     <th style={{
                       padding: '8px 12px', textAlign: 'right', fontSize: 11, fontWeight: 600,
@@ -844,18 +826,6 @@ export default function Financials() {
                     </td>
                     <td style={{ padding: '10px 12px', color: c.textSecondary, fontSize: 12, whiteSpace: 'nowrap' }}>
                       {formatDate(expense.date)}
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      {expense.recurring ? (
-                        <span style={{
-                          fontSize: 10, fontWeight: 600, padding: '2px 8px',
-                          borderRadius: 9999, background: c.infoMuted, color: c.info,
-                        }}>
-                          Yes
-                        </span>
-                      ) : (
-                        <span style={{ color: c.textMuted, fontSize: 12 }}>No</span>
-                      )}
                     </td>
                     {!isViewer && (
                       <td style={{ padding: '10px 12px', textAlign: 'right' }}>
@@ -922,30 +892,6 @@ export default function Financials() {
           onChange={v => setExpenseForm(f => ({ ...f, date: v }))}
           required
         />
-
-        {/* Recurring toggle */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            cursor: 'pointer', fontSize: 13, color: c.text,
-          }}>
-            <div
-              onClick={() => setExpenseForm(f => ({ ...f, recurring: !f.recurring }))}
-              style={{
-                width: 18, height: 18, borderRadius: 4,
-                border: `1.5px solid ${expenseForm.recurring ? c.accent : c.border}`,
-                background: expenseForm.recurring ? c.accent : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s', flexShrink: 0, cursor: 'pointer',
-              }}
-            >
-              {expenseForm.recurring && <Icons.Check size={12} style={{ color: '#0a0c14' }} />}
-            </div>
-            <span onClick={() => setExpenseForm(f => ({ ...f, recurring: !f.recurring }))}>
-              Recurring expense (monthly)
-            </span>
-          </label>
-        </div>
 
         {expenseError && (
           <p style={{ color: c.danger, fontSize: 12, marginBottom: 12 }}>{expenseError}</p>

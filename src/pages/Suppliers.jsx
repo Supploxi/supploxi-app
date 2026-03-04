@@ -63,21 +63,20 @@ function StarRating({ value, onChange, readOnly }) {
 }
 
 const emptyForm = () => ({
-  name: '',
+  company_name: '',
   contact_name: '',
   email: '',
   phone: '',
   country: '',
   city: '',
-  address: '',
   website: '',
   payment_terms: '',
   lead_time_days: '',
   currency: 'USD',
   notes: '',
-  categories: '',
-  rating: 0,
-  active: true,
+  category: '',
+  score: 0,
+  status: 'active',
 })
 
 export default function Suppliers() {
@@ -104,7 +103,7 @@ export default function Suppliers() {
     const { data, error: fetchErr } = await supabase
       .from('suppliers')
       .select('*')
-      .order('name')
+      .order('company_name')
     if (fetchErr) {
       console.error('Failed to load suppliers:', fetchErr.message)
     }
@@ -135,7 +134,7 @@ export default function Suppliers() {
     if (!search.trim()) return suppliers
     const q = search.toLowerCase()
     return suppliers.filter(s =>
-      (s.name || '').toLowerCase().includes(q) ||
+      (s.company_name || '').toLowerCase().includes(q) ||
       (s.contact_name || '').toLowerCase().includes(q) ||
       (s.email || '').toLowerCase().includes(q) ||
       (s.country || '').toLowerCase().includes(q)
@@ -155,21 +154,20 @@ export default function Suppliers() {
   function openEdit(supplier) {
     setEditing(supplier)
     setForm({
-      name: supplier.name || '',
+      company_name: supplier.company_name || '',
       contact_name: supplier.contact_name || '',
       email: supplier.email || '',
       phone: supplier.phone || '',
       country: supplier.country || '',
       city: supplier.city || '',
-      address: supplier.address || '',
       website: supplier.website || '',
       payment_terms: supplier.payment_terms || '',
       lead_time_days: supplier.lead_time_days ?? '',
       currency: supplier.currency || 'USD',
       notes: supplier.notes || '',
-      categories: supplier.categories || '',
-      rating: supplier.rating || 0,
-      active: supplier.active !== false,
+      category: supplier.category || '',
+      score: supplier.score || 0,
+      status: supplier.status || 'active',
     })
     setError('')
     loadSupplierStats(supplier.id)
@@ -179,21 +177,20 @@ export default function Suppliers() {
   function duplicateSupplier(supplier) {
     setEditing(null)
     setForm({
-      name: '',
+      company_name: '',
       contact_name: supplier.contact_name || '',
       email: supplier.email || '',
       phone: supplier.phone || '',
       country: supplier.country || '',
       city: supplier.city || '',
-      address: supplier.address || '',
       website: supplier.website || '',
       payment_terms: supplier.payment_terms || '',
       lead_time_days: supplier.lead_time_days ?? '',
       currency: supplier.currency || 'USD',
       notes: supplier.notes || '',
-      categories: supplier.categories || '',
-      rating: supplier.rating || 0,
-      active: true,
+      category: supplier.category || '',
+      score: supplier.score || 0,
+      status: 'active',
     })
     setError('')
     setSupplierStats({})
@@ -202,26 +199,25 @@ export default function Suppliers() {
 
   async function save() {
     if (isViewer) return
-    if (!form.name.trim()) { setError('Supplier name is required'); return }
+    if (!form.company_name.trim()) { setError('Supplier name is required'); return }
     setSaving(true)
     setError('')
     try {
       const payload = {
-        name: form.name.trim(),
+        company_name: form.company_name.trim(),
         contact_name: form.contact_name.trim() || null,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         country: form.country || null,
         city: form.city.trim() || null,
-        address: form.address.trim() || null,
         website: form.website.trim() || null,
         payment_terms: form.payment_terms || null,
         lead_time_days: form.lead_time_days !== '' ? parseInt(form.lead_time_days) || null : null,
         currency: form.currency || 'USD',
         notes: form.notes.trim() || null,
-        categories: form.categories.trim() || null,
-        rating: parseInt(form.rating) || 0,
-        active: form.active,
+        category: form.category.trim() || null,
+        score: parseInt(form.score) || 0,
+        status: form.status,
       }
       if (editing) {
         const { error: updErr } = await supabase.from('suppliers').update(payload).eq('id', editing.id)
@@ -241,9 +237,10 @@ export default function Suppliers() {
 
   async function toggleActive(supplier) {
     if (isViewer) return
-    const { error: updErr } = await supabase.from('suppliers').update({ active: !supplier.active }).eq('id', supplier.id)
+    const newStatus = supplier.status === 'active' ? 'inactive' : 'active'
+    const { error: updErr } = await supabase.from('suppliers').update({ status: newStatus }).eq('id', supplier.id)
     if (!updErr) {
-      setSuppliers(arr => arr.map(s => s.id === supplier.id ? { ...s, active: !s.active } : s))
+      setSuppliers(arr => arr.map(s => s.id === supplier.id ? { ...s, status: newStatus } : s))
     }
   }
 
@@ -256,16 +253,10 @@ export default function Suppliers() {
     setConfirmDelete(null)
   }
 
-  function renderCategoryTags(categories) {
-    if (!categories) return null
-    const tags = categories.split(',').map(t => t.trim()).filter(Boolean)
-    if (tags.length === 0) return null
+  function renderCategoryTag(category) {
+    if (!category) return null
     return (
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {tags.map((tag, i) => (
-          <Badge key={i} variant="muted" style={{ fontSize: 10 }}>{tag}</Badge>
-        ))}
-      </div>
+      <Badge variant="muted" style={{ fontSize: 10 }}>{category}</Badge>
     )
   }
 
@@ -306,14 +297,14 @@ export default function Suppliers() {
                   onClick={() => !isViewer && openEdit(s)}
                   style={{
                     cursor: isViewer ? 'default' : 'pointer',
-                    opacity: s.active ? 1 : 0.55,
+                    opacity: s.status === 'active' ? 1 : 0.55,
                     transition: 'background 0.1s',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = c.surfaceHover }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 >
                   <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}`, fontSize: 13, color: c.text, fontWeight: 600 }}>
-                    {s.name}
+                    {s.company_name}
                   </td>
                   <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}`, fontSize: 13, color: c.textSecondary }}>
                     {s.contact_name || '\u2014'}
@@ -328,11 +319,11 @@ export default function Suppliers() {
                     {s.lead_time_days ? `${s.lead_time_days} days` : '\u2014'}
                   </td>
                   <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}` }}>
-                    <StarRating value={s.rating} readOnly />
+                    <StarRating value={s.score} readOnly />
                   </td>
                   <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}` }}>
-                    <Badge variant={s.active ? 'success' : 'muted'}>
-                      {s.active ? 'Active' : 'Inactive'}
+                    <Badge variant={s.status === 'active' ? 'success' : 'muted'}>
+                      {s.status === 'active' ? 'Active' : 'Inactive'}
                     </Badge>
                   </td>
                   {!isViewer && (
@@ -346,8 +337,8 @@ export default function Suppliers() {
                         <Btn variant="ghost" size="sm" onClick={() => duplicateSupplier(s)} title="Duplicate supplier">
                           <Icons.Copy size={13} />
                         </Btn>
-                        <Btn variant="ghost" size="sm" onClick={() => toggleActive(s)} title={s.active ? 'Deactivate' : 'Activate'}>
-                          {s.active
+                        <Btn variant="ghost" size="sm" onClick={() => toggleActive(s)} title={s.status === 'active' ? 'Deactivate' : 'Activate'}>
+                          {s.status === 'active'
                             ? <Icons.Eye size={13} />
                             : <Icons.Eye size={13} style={{ opacity: 0.4 }} />
                           }
@@ -376,15 +367,15 @@ export default function Suppliers() {
             key={s.id}
             onClick={() => !isViewer && openEdit(s)}
             hover
-            style={{ opacity: s.active ? 1 : 0.55, cursor: isViewer ? 'default' : 'pointer' }}
+            style={{ opacity: s.status === 'active' ? 1 : 0.55, cursor: isViewer ? 'default' : 'pointer' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
               <div>
-                <div style={{ color: c.text, fontWeight: 700, fontSize: 14 }}>{s.name}</div>
+                <div style={{ color: c.text, fontWeight: 700, fontSize: 14 }}>{s.company_name}</div>
                 {s.contact_name && <div style={{ color: c.textSecondary, fontSize: 12, marginTop: 2 }}>{s.contact_name}</div>}
               </div>
-              <Badge variant={s.active ? 'success' : 'muted'}>
-                {s.active ? 'Active' : 'Inactive'}
+              <Badge variant={s.status === 'active' ? 'success' : 'muted'}>
+                {s.status === 'active' ? 'Active' : 'Inactive'}
               </Badge>
             </div>
 
@@ -395,10 +386,10 @@ export default function Suppliers() {
             </div>
 
             <div style={{ marginBottom: 8 }}>
-              <StarRating value={s.rating} readOnly />
+              <StarRating value={s.score} readOnly />
             </div>
 
-            {renderCategoryTags(s.categories)}
+            {renderCategoryTag(s.category)}
 
             {!isViewer && (
               <div style={{ display: 'flex', gap: 6, marginTop: 10 }} onClick={e => e.stopPropagation()}>
@@ -407,7 +398,7 @@ export default function Suppliers() {
                   <Icons.Copy size={12} style={{ marginRight: 3 }} />Duplicate
                 </Btn>
                 <Btn variant="ghost" size="sm" onClick={() => toggleActive(s)}>
-                  {s.active ? 'Deactivate' : 'Activate'}
+                  {s.status === 'active' ? 'Deactivate' : 'Activate'}
                 </Btn>
                 <Btn variant="ghost" size="sm" onClick={() => setConfirmDelete(s)} style={{ color: c.danger }}>
                   <Icons.Trash size={12} />
@@ -456,7 +447,7 @@ export default function Suppliers() {
       )}
 
       {/* Add / Edit Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? `Edit Supplier - ${editing.name}` : 'Add Supplier'} width={640}>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? `Edit Supplier - ${editing.company_name}` : 'Add Supplier'} width={640}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
 
           {/* Stats for existing supplier */}
@@ -482,8 +473,8 @@ export default function Suppliers() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0, columnGap: 12 }}>
             <Field
               label="Supplier Name"
-              value={form.name}
-              onChange={v => setForm(f => ({ ...f, name: v }))}
+              value={form.company_name}
+              onChange={v => setForm(f => ({ ...f, company_name: v }))}
               required
               readOnly={isViewer}
               placeholder="e.g. Shenzhen Electronics Co."
@@ -533,14 +524,6 @@ export default function Suppliers() {
               placeholder="e.g. Shenzhen"
             />
           </div>
-          <Field
-            label="Address"
-            value={form.address}
-            onChange={v => setForm(f => ({ ...f, address: v }))}
-            readOnly={isViewer}
-            placeholder="Full street address"
-          />
-
           {/* Terms & Logistics */}
           <SectionTitle style={{ marginBottom: 8 }}>Terms & Logistics</SectionTitle>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 0, columnGap: 12 }}>
@@ -577,50 +560,45 @@ export default function Suppliers() {
             placeholder="https://..."
           />
 
-          {/* Categories */}
-          <SectionTitle style={{ marginBottom: 8 }}>Categories</SectionTitle>
+          {/* Category */}
+          <SectionTitle style={{ marginBottom: 8 }}>Category</SectionTitle>
           <Field
-            label="Categories (comma-separated)"
-            value={form.categories}
-            onChange={v => setForm(f => ({ ...f, categories: v }))}
+            label="Category"
+            value={form.category}
+            onChange={v => setForm(f => ({ ...f, category: v }))}
             readOnly={isViewer}
-            placeholder="e.g. Electronics, Accessories, Phone Cases"
+            placeholder="e.g. Electronics"
           />
-          {form.categories && (
-            <div style={{ marginTop: -4, marginBottom: 12 }}>
-              {renderCategoryTags(form.categories)}
-            </div>
-          )}
 
-          {/* Rating */}
-          <SectionTitle style={{ marginBottom: 8 }}>Rating</SectionTitle>
+          {/* Score */}
+          <SectionTitle style={{ marginBottom: 8 }}>Score</SectionTitle>
           <div style={{ marginBottom: 12 }}>
             <StarRating
-              value={form.rating}
-              onChange={v => setForm(f => ({ ...f, rating: v }))}
+              value={form.score}
+              onChange={v => setForm(f => ({ ...f, score: v }))}
               readOnly={isViewer}
             />
             <span style={{ color: c.textSecondary, fontSize: 12, marginLeft: 8 }}>
-              {form.rating > 0 ? `${form.rating} / 5` : 'Not rated'}
+              {form.score > 0 ? `${form.score} / 5` : 'Not rated'}
             </span>
           </div>
 
-          {/* Active Toggle */}
+          {/* Status Toggle */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            {['Active', 'Inactive'].map(status => (
+            {['active', 'inactive'].map(st => (
               <button
-                key={status}
-                onClick={() => { if (!isViewer) setForm(f => ({ ...f, active: status === 'Active' })) }}
+                key={st}
+                onClick={() => { if (!isViewer) setForm(f => ({ ...f, status: st })) }}
                 style={{
                   padding: '7px 14px', borderRadius: 8, cursor: isViewer ? 'default' : 'pointer',
                   fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
-                  background: (status === 'Active') === form.active ? c.successMuted : c.surfaceHover,
-                  border: `1px solid ${(status === 'Active') === form.active ? c.success + '60' : c.border}`,
-                  color: (status === 'Active') === form.active ? c.success : c.textMuted,
+                  background: form.status === st ? c.successMuted : c.surfaceHover,
+                  border: `1px solid ${form.status === st ? c.success + '60' : c.border}`,
+                  color: form.status === st ? c.success : c.textMuted,
                   transition: 'all 0.15s',
                 }}
               >
-                {status}
+                {st === 'active' ? 'Active' : 'Inactive'}
               </button>
             ))}
           </div>
@@ -664,7 +642,7 @@ export default function Suppliers() {
         onClose={() => setConfirmDelete(null)}
         onConfirm={handleDelete}
         title="Delete Supplier"
-        message={`Are you sure you want to delete "${confirmDelete?.name}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete "${confirmDelete?.company_name}"? This action cannot be undone.`}
         confirmText="Delete"
         variant="danger"
       />

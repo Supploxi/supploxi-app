@@ -69,7 +69,7 @@ export default function Orders() {
 
   // Load products for manual order form
   useEffect(() => {
-    supabase.from('products').select('id, name, sku, price_usd').eq('active', true).order('name')
+    supabase.from('products').select('id, name, sku, selling_price').eq('status', 'active').order('name')
       .then(({ data }) => setProducts(data || []))
   }, [])
 
@@ -319,7 +319,7 @@ export default function Orders() {
     setOrderForm(f => ({
       ...f,
       items: f.items.map((item, i) =>
-        i === idx ? { ...item, product_id: productId, unit_price: product?.price_usd ?? '' } : item
+        i === idx ? { ...item, product_id: productId, unit_price: product?.selling_price ?? '' } : item
       ),
     }))
   }

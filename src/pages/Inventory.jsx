@@ -49,10 +49,10 @@ function movementTypeLabel(type) {
   return type || 'Unknown'
 }
 
-// Determine stock status based on current stock vs min_order_qty
-function getStockStatus(currentStock, minOrderQty) {
+// Determine stock status based on current stock vs reorder_point
+function getStockStatus(currentStock, reorderPoint) {
   if (currentStock <= 0) return { label: 'Out of Stock', variant: 'danger' }
-  if (minOrderQty && currentStock < minOrderQty) return { label: 'Low', variant: 'warning' }
+  if (reorderPoint && currentStock < reorderPoint) return { label: 'Low', variant: 'warning' }
   return { label: 'In Stock', variant: 'success' }
 }
 
@@ -153,16 +153,16 @@ export default function Inventory() {
   const stockLevels = useMemo(() => {
     return products.map(p => {
       const currentStock = stockByProduct[p.id] || 0
-      const unitCost = parseFloat(p.unit_cost) || 0
-      const stockValue = currentStock * unitCost
-      const minOrderQty = parseInt(p.min_order_qty) || 0
-      const status = getStockStatus(currentStock, minOrderQty)
+      const costPrice = parseFloat(p.cost_price) || 0
+      const stockValue = currentStock * costPrice
+      const reorderPoint = parseInt(p.reorder_point) || 0
+      const status = getStockStatus(currentStock, reorderPoint)
       return {
         ...p,
         currentStock,
-        unitCost,
+        costPrice,
         stockValue,
-        minOrderQty,
+        reorderPoint,
         status,
       }
     })
@@ -346,7 +346,7 @@ export default function Inventory() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Name', 'SKU', 'Current Stock', 'Unit Cost', 'Stock Value', 'Min Order Qty', 'Status'].map(header => (
+                {['Name', 'SKU', 'Current Stock', 'Cost Price', 'Stock Value', 'Reorder Point', 'Status'].map(header => (
                   <th key={header} style={{
                     padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600,
                     color: c.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -387,13 +387,13 @@ export default function Inventory() {
                     {formatNumber(p.currentStock)}
                   </td>
                   <td style={{ padding: '10px 14px', fontSize: 13, color: c.textSecondary, whiteSpace: 'nowrap' }}>
-                    {formatUSD(p.unitCost)}
+                    {formatUSD(p.costPrice)}
                   </td>
                   <td style={{ padding: '10px 14px', fontSize: 13, color: c.text, fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {formatUSD(p.stockValue)}
                   </td>
                   <td style={{ padding: '10px 14px', fontSize: 13, color: c.textSecondary }}>
-                    {p.minOrderQty > 0 ? formatNumber(p.minOrderQty) : '--'}
+                    {p.reorderPoint > 0 ? formatNumber(p.reorderPoint) : '--'}
                   </td>
                   <td style={{ padding: '10px 14px' }}>
                     <Badge variant={p.status.variant}>
@@ -438,8 +438,8 @@ export default function Inventory() {
                 <span style={{ color: c.text, fontWeight: 600 }}>{formatNumber(p.currentStock)}</span>
               </div>
               <div>
-                <span style={{ color: c.textSecondary }}>Unit Cost: </span>
-                <span style={{ color: c.text, fontWeight: 600 }}>{formatUSD(p.unitCost)}</span>
+                <span style={{ color: c.textSecondary }}>Cost Price: </span>
+                <span style={{ color: c.text, fontWeight: 600 }}>{formatUSD(p.costPrice)}</span>
               </div>
               <div>
                 <span style={{ color: c.textSecondary }}>Value: </span>
@@ -447,7 +447,7 @@ export default function Inventory() {
               </div>
               <div>
                 <span style={{ color: c.textSecondary }}>Min Qty: </span>
-                <span style={{ color: c.text, fontWeight: 600 }}>{p.minOrderQty > 0 ? formatNumber(p.minOrderQty) : '--'}</span>
+                <span style={{ color: c.text, fontWeight: 600 }}>{p.reorderPoint > 0 ? formatNumber(p.reorderPoint) : '--'}</span>
               </div>
             </div>
 
@@ -614,7 +614,7 @@ export default function Inventory() {
           title="Low Stock Items"
           value={formatNumber(lowStockCount)}
           icon={<Icons.AlertTriangle size={18} />}
-          subtitle={lowStockCount > 0 ? 'Below min order qty' : undefined}
+          subtitle={lowStockCount > 0 ? 'Below reorder point' : undefined}
         />
         <StatCard
           title="Out of Stock"

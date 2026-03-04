@@ -11,28 +11,20 @@ const CATEGORIES = [
   'Tools & Hardware', 'Kitchen', 'Baby Products', 'Other',
 ]
 
-const ORIGIN_COUNTRIES = [
-  'China', 'Hong Kong', 'Taiwan', 'Vietnam', 'India', 'Bangladesh',
-  'Thailand', 'Indonesia', 'South Korea', 'Japan', 'Malaysia',
-  'Philippines', 'Cambodia', 'Turkey', 'Mexico', 'United States', 'Other',
-]
-
 const emptyForm = () => ({
   name: '',
   sku: '',
   category: '',
   description: '',
   image_url: '',
-  unit_cost: '',
-  price_usd: '',
+  cost_price: '',
+  selling_price: '',
   weight_kg: '',
-  hs_code: '',
-  country_of_origin: '',
-  supplier_id: '',
-  min_order_qty: '',
+  hts_code: '',
+  primary_supplier_id: '',
   stock_quantity: '',
   reorder_point: '',
-  active: true,
+  status: 'active',
 })
 
 function calcMargin(price, cost) {
@@ -83,7 +75,7 @@ export default function Products() {
     setLoading(true)
     const [prodRes, suppRes] = await Promise.all([
       supabase.from('products').select('*').order('name'),
-      supabase.from('suppliers').select('id, name').eq('active', true).order('name'),
+      supabase.from('suppliers').select('id, company_name').eq('status', 'active').order('company_name'),
     ])
     if (prodRes.error) console.error('Failed to load products:', prodRes.error.message)
     if (suppRes.error) console.error('Failed to load suppliers:', suppRes.error.message)
@@ -94,12 +86,12 @@ export default function Products() {
 
   const supplierMap = useMemo(() => {
     const map = {}
-    suppliers.forEach(s => { map[s.id] = s.name })
+    suppliers.forEach(s => { map[s.id] = s.company_name })
     return map
   }, [suppliers])
 
   const supplierOptions = useMemo(() => {
-    return suppliers.map(s => ({ value: s.id, label: s.name }))
+    return suppliers.map(s => ({ value: s.id, label: s.company_name }))
   }, [suppliers])
 
   const filtered = useMemo(() => {
@@ -129,16 +121,14 @@ export default function Products() {
       category: product.category || '',
       description: product.description || '',
       image_url: product.image_url || '',
-      unit_cost: product.unit_cost ?? '',
-      price_usd: product.price_usd ?? '',
+      cost_price: product.cost_price ?? '',
+      selling_price: product.selling_price ?? '',
       weight_kg: product.weight_kg ?? '',
-      hs_code: product.hs_code || '',
-      country_of_origin: product.country_of_origin || '',
-      supplier_id: product.supplier_id || '',
-      min_order_qty: product.min_order_qty ?? '',
+      hts_code: product.hts_code || '',
+      primary_supplier_id: product.primary_supplier_id || '',
       stock_quantity: product.stock_quantity ?? '',
       reorder_point: product.reorder_point ?? '',
-      active: product.active !== false,
+      status: product.status || 'active',
     })
     setError('')
     setShowModal(true)
@@ -156,16 +146,14 @@ export default function Products() {
         category: form.category || null,
         description: form.description.trim() || null,
         image_url: form.image_url.trim() || null,
-        unit_cost: form.unit_cost !== '' ? parseFloat(form.unit_cost) || 0 : null,
-        price_usd: form.price_usd !== '' ? parseFloat(form.price_usd) || 0 : null,
+        cost_price: form.cost_price !== '' ? parseFloat(form.cost_price) || 0 : null,
+        selling_price: form.selling_price !== '' ? parseFloat(form.selling_price) || 0 : null,
         weight_kg: form.weight_kg !== '' ? parseFloat(form.weight_kg) || null : null,
-        hs_code: form.hs_code.trim() || null,
-        country_of_origin: form.country_of_origin || null,
-        supplier_id: form.supplier_id || null,
-        min_order_qty: form.min_order_qty !== '' ? parseInt(form.min_order_qty) || null : null,
+        hts_code: form.hts_code.trim() || null,
+        primary_supplier_id: form.primary_supplier_id || null,
         stock_quantity: form.stock_quantity !== '' ? parseInt(form.stock_quantity) || 0 : 0,
         reorder_point: form.reorder_point !== '' ? parseInt(form.reorder_point) || 0 : 0,
-        active: form.active,
+        status: form.status,
       }
       if (editing) {
         const { error: updErr } = await supabase.from('products').update(payload).eq('id', editing.id)
@@ -185,9 +173,10 @@ export default function Products() {
 
   async function toggleActive(product) {
     if (isViewer) return
-    const { error: updErr } = await supabase.from('products').update({ active: !product.active }).eq('id', product.id)
+    const newStatus = product.status === 'active' ? 'inactive' : 'active'
+    const { error: updErr } = await supabase.from('products').update({ status: newStatus }).eq('id', product.id)
     if (!updErr) {
-      setProducts(arr => arr.map(p => p.id === product.id ? { ...p, active: !p.active } : p))
+      setProducts(arr => arr.map(p => p.id === product.id ? { ...p, status: newStatus } : p))
     }
   }
 
@@ -265,16 +254,16 @@ export default function Products() {
           sku: sp.sku || null,
           category: sp.category || null,
           image_url: sp.image_url || null,
-          price_usd: sp.price_usd || null,
-          shopify_product_id: String(sp.shopify_product_id),
-          active: true,
+          selling_price: sp.price_usd || sp.selling_price || null,
+          platform_shopify_id: String(sp.shopify_product_id),
+          status: 'active',
         }
 
         // Check if product already exists by shopify_product_id
         const { data: existing } = await supabase
           .from('products')
           .select('id')
-          .eq('shopify_product_id', String(sp.shopify_product_id))
+          .eq('platform_shopify_id', String(sp.shopify_product_id))
           .maybeSingle()
 
         if (existing) {
@@ -295,7 +284,7 @@ export default function Products() {
     }
   }
 
-  const formMargin = calcMargin(form.price_usd, form.unit_cost)
+  const formMargin = calcMargin(form.selling_price, form.cost_price)
 
   if (loading) return <Loading text="Loading products..." />
 
@@ -329,14 +318,14 @@ export default function Products() {
             </thead>
             <tbody>
               {paged.map(p => {
-                const margin = calcMargin(p.price_usd, p.unit_cost)
+                const margin = calcMargin(p.selling_price, p.cost_price)
                 return (
                   <tr
                     key={p.id}
                     onClick={() => setViewProduct(p)}
                     style={{
                       cursor: 'pointer',
-                      opacity: p.active !== false ? 1 : 0.55,
+                      opacity: p.status === 'active' ? 1 : 0.55,
                       transition: 'background 0.1s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.background = c.surfaceHover }}
@@ -375,10 +364,10 @@ export default function Products() {
                       {p.category || '\u2014'}
                     </td>
                     <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}`, fontSize: 13, color: c.textSecondary, whiteSpace: 'nowrap' }}>
-                      {p.unit_cost != null ? formatUSD(p.unit_cost) : '\u2014'}
+                      {p.cost_price != null ? formatUSD(p.cost_price) : '\u2014'}
                     </td>
                     <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}`, fontSize: 13, color: c.text, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      {p.price_usd != null ? formatUSD(p.price_usd) : '\u2014'}
+                      {p.selling_price != null ? formatUSD(p.selling_price) : '\u2014'}
                     </td>
                     <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}` }}>
                       {margin !== null ? (
@@ -391,12 +380,12 @@ export default function Products() {
                     </td>
                     <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}`, fontSize: 13, color: c.textSecondary, maxWidth: 160 }}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.supplier_id ? (supplierMap[p.supplier_id] || '\u2014') : '\u2014'}
+                        {p.primary_supplier_id ? (supplierMap[p.primary_supplier_id] || '\u2014') : '\u2014'}
                       </div>
                     </td>
                     <td style={{ padding: '10px 14px', borderBottom: `1px solid ${c.border}` }}>
-                      <Badge variant={p.active !== false ? 'success' : 'muted'}>
-                        {p.active !== false ? 'Active' : 'Inactive'}
+                      <Badge variant={p.status === 'active' ? 'success' : 'muted'}>
+                        {p.status === 'active' ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
                     {!isViewer && (
@@ -431,13 +420,13 @@ export default function Products() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {paged.map(p => {
-          const margin = calcMargin(p.price_usd, p.unit_cost)
+          const margin = calcMargin(p.selling_price, p.cost_price)
           return (
             <Card
               key={p.id}
               onClick={() => setViewProduct(p)}
               hover
-              style={{ opacity: p.active !== false ? 1 : 0.55, cursor: 'pointer' }}
+              style={{ opacity: p.status === 'active' ? 1 : 0.55, cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
                 {p.image_url ? (
@@ -464,8 +453,8 @@ export default function Products() {
                     <div style={{ color: c.text, fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.name}
                     </div>
-                    <Badge variant={p.active !== false ? 'success' : 'muted'}>
-                      {p.active !== false ? 'Active' : 'Inactive'}
+                    <Badge variant={p.status === 'active' ? 'success' : 'muted'}>
+                      {p.status === 'active' ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                   {p.sku && (
@@ -478,8 +467,8 @@ export default function Products() {
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: c.textSecondary, marginBottom: 8 }}>
                 {p.category && <span>{p.category}</span>}
-                {p.unit_cost != null && <span>Cost: {formatUSD(p.unit_cost)}</span>}
-                {p.price_usd != null && <span style={{ color: c.text, fontWeight: 600 }}>Price: {formatUSD(p.price_usd)}</span>}
+                {p.cost_price != null && <span>Cost: {formatUSD(p.cost_price)}</span>}
+                {p.selling_price != null && <span style={{ color: c.text, fontWeight: 600 }}>Price: {formatUSD(p.selling_price)}</span>}
                 {margin !== null && (
                   <Badge variant={marginVariant(margin)} style={{ fontSize: 10 }}>
                     {margin.toFixed(1)}% margin
@@ -487,9 +476,9 @@ export default function Products() {
                 )}
               </div>
 
-              {p.supplier_id && supplierMap[p.supplier_id] && (
+              {p.primary_supplier_id && supplierMap[p.primary_supplier_id] && (
                 <div style={{ fontSize: 12, color: c.textSecondary, marginBottom: 8 }}>
-                  Supplier: {supplierMap[p.supplier_id]}
+                  Supplier: {supplierMap[p.primary_supplier_id]}
                 </div>
               )}
 
@@ -633,9 +622,9 @@ export default function Products() {
           <SectionTitle style={{ marginBottom: 8 }}>Pricing</SectionTitle>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 0, columnGap: 12 }}>
             <Field
-              label="Unit Cost (USD)"
-              value={form.unit_cost}
-              onChange={v => setForm(f => ({ ...f, unit_cost: v }))}
+              label="Cost Price (USD)"
+              value={form.cost_price}
+              onChange={v => setForm(f => ({ ...f, cost_price: v }))}
               type="number"
               min="0"
               step="0.01"
@@ -644,8 +633,8 @@ export default function Products() {
             />
             <Field
               label="Selling Price (USD)"
-              value={form.price_usd}
-              onChange={v => setForm(f => ({ ...f, price_usd: v }))}
+              value={form.selling_price}
+              onChange={v => setForm(f => ({ ...f, selling_price: v }))}
               type="number"
               min="0"
               step="0.01"
@@ -674,7 +663,7 @@ export default function Products() {
 
           {/* Shipping & Customs */}
           <SectionTitle style={{ marginBottom: 8 }}>Shipping & Customs</SectionTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 0, columnGap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0, columnGap: 12 }}>
             <Field
               label="Weight (kg)"
               value={form.weight_kg}
@@ -686,43 +675,24 @@ export default function Products() {
               placeholder="0.00"
             />
             <Field
-              label="HS Code"
-              value={form.hs_code}
-              onChange={v => setForm(f => ({ ...f, hs_code: v }))}
+              label="HTS Code"
+              value={form.hts_code}
+              onChange={v => setForm(f => ({ ...f, hts_code: v }))}
               readOnly={isViewer}
               placeholder="e.g. 8518.30.20"
             />
-            <Select
-              label="Country of Origin"
-              value={form.country_of_origin}
-              onChange={v => setForm(f => ({ ...f, country_of_origin: v }))}
-              options={ORIGIN_COUNTRIES}
-              placeholder="Select country..."
-              disabled={isViewer}
-            />
           </div>
 
-          {/* Supplier & Ordering */}
-          <SectionTitle style={{ marginBottom: 8 }}>Supplier & Ordering</SectionTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0, columnGap: 12 }}>
-            <Select
-              label="Supplier"
-              value={form.supplier_id}
-              onChange={v => setForm(f => ({ ...f, supplier_id: v }))}
-              options={supplierOptions}
-              placeholder="Select supplier..."
-              disabled={isViewer}
-            />
-            <Field
-              label="Min Order Qty"
-              value={form.min_order_qty}
-              onChange={v => setForm(f => ({ ...f, min_order_qty: v }))}
-              type="number"
-              min="1"
-              readOnly={isViewer}
-              placeholder="e.g. 100"
-            />
-          </div>
+          {/* Supplier */}
+          <SectionTitle style={{ marginBottom: 8 }}>Supplier</SectionTitle>
+          <Select
+            label="Primary Supplier"
+            value={form.primary_supplier_id}
+            onChange={v => setForm(f => ({ ...f, primary_supplier_id: v }))}
+            options={supplierOptions}
+            placeholder="Select supplier..."
+            disabled={isViewer}
+          />
 
           {/* Inventory */}
           <SectionTitle style={{ marginBottom: 8 }}>Inventory</SectionTitle>
@@ -756,20 +726,20 @@ export default function Products() {
           {/* Active Toggle */}
           <SectionTitle style={{ marginBottom: 8 }}>Status</SectionTitle>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            {['Active', 'Inactive'].map(status => (
+            {['active', 'inactive'].map(st => (
               <button
-                key={status}
-                onClick={() => { if (!isViewer) setForm(f => ({ ...f, active: status === 'Active' })) }}
+                key={st}
+                onClick={() => { if (!isViewer) setForm(f => ({ ...f, status: st })) }}
                 style={{
                   padding: '7px 14px', borderRadius: 8, cursor: isViewer ? 'default' : 'pointer',
                   fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
-                  background: (status === 'Active') === form.active ? c.successMuted : c.surfaceHover,
-                  border: `1px solid ${(status === 'Active') === form.active ? c.success + '60' : c.border}`,
-                  color: (status === 'Active') === form.active ? c.success : c.textMuted,
+                  background: form.status === st ? c.successMuted : c.surfaceHover,
+                  border: `1px solid ${form.status === st ? c.success + '60' : c.border}`,
+                  color: form.status === st ? c.success : c.textMuted,
                   transition: 'all 0.15s',
                 }}
               >
-                {status}
+                {st === 'active' ? 'Active' : 'Inactive'}
               </button>
             ))}
           </div>
@@ -800,7 +770,7 @@ export default function Products() {
       {/* View Product Modal */}
       <Modal open={!!viewProduct} onClose={() => setViewProduct(null)} title="Product Details" width={560}>
         {viewProduct && (() => {
-          const vm = calcMargin(viewProduct.price_usd, viewProduct.unit_cost)
+          const vm = calcMargin(viewProduct.selling_price, viewProduct.cost_price)
           const row = (label, value, badge) => (
             <div>
               <div style={{ color: c.textSecondary, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</div>
@@ -825,8 +795,8 @@ export default function Products() {
                   <h3 style={{ color: c.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{viewProduct.name}</h3>
                   {viewProduct.sku && <div style={{ color: c.textSecondary, fontSize: 13, fontFamily: 'monospace', marginTop: 4 }}>{viewProduct.sku}</div>}
                   <div style={{ marginTop: 6 }}>
-                    <Badge variant={viewProduct.active !== false ? 'success' : 'muted'}>
-                      {viewProduct.active !== false ? 'Active' : 'Inactive'}
+                    <Badge variant={viewProduct.status === 'active' ? 'success' : 'muted'}>
+                      {viewProduct.status === 'active' ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                 </div>
@@ -842,14 +812,12 @@ export default function Products() {
               {/* Detail grid */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
                 {row('Category', viewProduct.category)}
-                {row('Supplier', viewProduct.supplier_id ? (supplierMap[viewProduct.supplier_id] || '--') : '--')}
-                {row('Unit Cost', viewProduct.unit_cost != null ? formatUSD(viewProduct.unit_cost) : '--')}
-                {row('Selling Price', viewProduct.price_usd != null ? formatUSD(viewProduct.price_usd) : '--')}
+                {row('Supplier', viewProduct.primary_supplier_id ? (supplierMap[viewProduct.primary_supplier_id] || '--') : '--')}
+                {row('Cost Price', viewProduct.cost_price != null ? formatUSD(viewProduct.cost_price) : '--')}
+                {row('Selling Price', viewProduct.selling_price != null ? formatUSD(viewProduct.selling_price) : '--')}
                 {row('Margin', vm !== null ? `${vm.toFixed(1)}%` : '--', vm !== null ? marginVariant(vm) : null)}
-                {row('HTS Code', viewProduct.hs_code)}
-                {row('Country of Origin', viewProduct.country_of_origin)}
+                {row('HTS Code', viewProduct.hts_code)}
                 {row('Weight', viewProduct.weight_kg != null ? `${viewProduct.weight_kg} kg` : '--')}
-                {row('Min Order Qty', viewProduct.min_order_qty != null ? String(viewProduct.min_order_qty) : '--')}
                 {row('Current Stock', viewProduct.stock_quantity != null ? String(viewProduct.stock_quantity) : '--')}
                 {row('Reorder Point', viewProduct.reorder_point != null ? String(viewProduct.reorder_point) : '--')}
               </div>

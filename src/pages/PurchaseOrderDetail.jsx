@@ -118,14 +118,14 @@ export default function PurchaseOrderDetail() {
 
       const { data: suppliersData } = await supabase
         .from('suppliers')
-        .select('id, name, email, contact_name')
-        .order('name', { ascending: true })
+        .select('id, company_name, email, contact_name')
+        .order('company_name', { ascending: true })
 
       setSuppliers(suppliersData || [])
 
       const { data: productsData } = await supabase
         .from('products')
-        .select('id, name, sku, unit_cost')
+        .select('id, name, sku, cost_price')
         .order('name', { ascending: true })
 
       setProducts(productsData || [])
@@ -169,7 +169,7 @@ export default function PurchaseOrderDetail() {
       name: product.name,
       sku: product.sku || '',
       quantity: 1,
-      unit_price: product.unit_cost || 0,
+      unit_price: product.cost_price || 0,
     }
     setItems(prev => [...prev, newItem])
     setDirty(true)
@@ -199,9 +199,7 @@ export default function PurchaseOrderDetail() {
     return sum + ((parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0))
   }, 0)
 
-  const shippingCost = parseFloat(po?.shipping_cost) || 0
-  const dutiesEstimate = parseFloat(po?.duties_estimate) || 0
-  const total = subtotal + shippingCost + dutiesEstimate
+  const total = subtotal
 
   // ─── Save ─────────────────────────────────────────────────
 
@@ -219,11 +217,7 @@ export default function PurchaseOrderDetail() {
           payment_terms: po.payment_terms || null,
           expected_delivery: po.expected_delivery || null,
           notes: po.notes || null,
-          shipping_cost: shippingCost,
-          duties_estimate: dutiesEstimate,
-          subtotal: subtotal,
-          total: total,
-          updated_at: new Date().toISOString(),
+          total_value: total,
         })
         .eq('id', id)
 
@@ -313,12 +307,7 @@ export default function PurchaseOrderDetail() {
           payment_terms: po.payment_terms || null,
           expected_delivery: po.expected_delivery || null,
           notes: po.notes || null,
-          shipping_cost: shippingCost,
-          duties_estimate: dutiesEstimate,
-          subtotal: subtotal,
-          total: total,
-          sent_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          total_value: total,
         })
         .eq('id', id)
 
@@ -353,7 +342,7 @@ export default function PurchaseOrderDetail() {
 
       const poEmailData = {
         po_number: po.po_number,
-        supplier_name: supplier.name || '',
+        supplier_name: supplier.company_name || '',
         items: items.map(it => ({
           name: it.name,
           sku: it.sku,
@@ -361,8 +350,6 @@ export default function PurchaseOrderDetail() {
           unit_price: it.unit_price,
         })),
         subtotal,
-        shipping_cost: shippingCost,
-        duties_estimate: dutiesEstimate,
         total,
         notes: po.notes || '',
         expected_delivery: po.expected_delivery ? formatDate(po.expected_delivery) : '',
@@ -409,7 +396,7 @@ export default function PurchaseOrderDetail() {
 
   const supplierOptions = suppliers.map(s => ({
     value: s.id,
-    label: s.name + (s.contact_name ? ` (${s.contact_name})` : ''),
+    label: s.company_name + (s.contact_name ? ` (${s.contact_name})` : ''),
   }))
 
   // ─── Allowed Status Transitions ───────────────────────────
@@ -637,18 +624,6 @@ export default function PurchaseOrderDetail() {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <FinRow label="Subtotal" value={subtotal} />
               <FinRow
-                label="Shipping Cost"
-                value={shippingCost}
-                editable
-                field="shipping_cost"
-              />
-              <FinRow
-                label="Duties Estimate"
-                value={dutiesEstimate}
-                editable
-                field="duties_estimate"
-              />
-              <FinRow
                 label="Total"
                 value={total}
                 bold
@@ -671,7 +646,7 @@ export default function PurchaseOrderDetail() {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: c.textSecondary, fontSize: 12 }}>Name</span>
                   <span style={{ color: c.text, fontSize: 13, fontWeight: 600 }}>
-                    {po.supplier.name || '-'}
+                    {po.supplier.company_name || '-'}
                   </span>
                 </div>
                 {po.supplier.contact_name && (
@@ -1001,7 +976,7 @@ export default function PurchaseOrderDetail() {
                   )}
                 </div>
                 <span style={{ color: c.textSecondary, fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-                  {formatUSD(p.unit_cost || 0)}
+                  {formatUSD(p.cost_price || 0)}
                 </span>
               </div>
             ))}
