@@ -78,8 +78,8 @@ function buildCSV(shipments) {
     escape(s.last_event),
     escape(s.last_update),
     escape(s.order_number),
-    escape(s.origin),
-    escape(s.destination),
+    escape(s.origin_country),
+    escape(s.destination_country),
     escape(s.shipped_at),
     escape(s.delivered_at),
     escape(s.estimated_delivery),
@@ -119,11 +119,10 @@ export default function Shipments() {
   // Manual shipment creation
   const [showShipmentModal, setShowShipmentModal] = useState(false)
   const [shipmentForm, setShipmentForm] = useState({
-    tracking_number: '', carrier: '', origin: '', destination: '', order_id: '', notes: '',
+    tracking_number: '', carrier: '', origin_country: '', destination_country: '', notes: '',
   })
   const [shipmentSaving, setShipmentSaving] = useState(false)
   const [shipmentError, setShipmentError] = useState('')
-  const [ordersList, setOrdersList] = useState([])
 
   // Filter state
   const [search, setSearch] = useState('')
@@ -132,12 +131,6 @@ export default function Shipments() {
 
   // Sort state
   const { sortField, sortDir, onSort } = useSort('last_update', 'desc')
-
-  // Load orders for shipment modal
-  useEffect(() => {
-    supabase.from('orders').select('id, order_number').order('created_at', { ascending: false }).limit(100)
-      .then(({ data }) => setOrdersList(data || []))
-  }, [])
 
   // Load shipments from supabase
   useEffect(() => {
@@ -377,7 +370,7 @@ export default function Shipments() {
 
   // Manual shipment creation
   function openNewShipment() {
-    setShipmentForm({ tracking_number: '', carrier: '', origin: '', destination: '', order_id: '', notes: '' })
+    setShipmentForm({ tracking_number: '', carrier: '', origin_country: '', destination_country: '', notes: '' })
     setShipmentError('')
     setShowShipmentModal(true)
   }
@@ -387,14 +380,11 @@ export default function Shipments() {
     setShipmentSaving(true)
     setShipmentError('')
     try {
-      const selectedOrder = ordersList.find(o => o.id === shipmentForm.order_id)
       const { error: insErr } = await supabase.from('shipments').insert({
         tracking_number: shipmentForm.tracking_number.trim(),
         carrier: shipmentForm.carrier || null,
-        origin: shipmentForm.origin.trim() || null,
-        destination: shipmentForm.destination.trim() || null,
-        order_id: shipmentForm.order_id || null,
-        order_number: selectedOrder?.order_number || null,
+        origin_country: shipmentForm.origin_country.trim() || null,
+        destination_country: shipmentForm.destination_country.trim() || null,
         notes: shipmentForm.notes.trim() || null,
         status: 'Not Found',
         user_id: user?.id,
@@ -739,9 +729,9 @@ export default function Shipments() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: c.textMuted, fontSize: 11 }}>
-                          {shipment.origin && shipment.destination
-                            ? `${shipment.origin} -> ${shipment.destination}`
-                            : shipment.origin || shipment.destination || '--'
+                          {shipment.origin_country && shipment.destination_country
+                            ? `${shipment.origin_country} -> ${shipment.destination_country}`
+                            : shipment.origin_country || shipment.destination_country || '--'
                           }
                         </span>
                         <span style={{ color: c.textMuted, fontSize: 11 }}>
@@ -842,9 +832,9 @@ export default function Shipments() {
                           </td>
                           <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
                             <span style={{ color: c.textSecondary, fontSize: 12 }}>
-                              {shipment.origin && shipment.destination
-                                ? `${shipment.origin} -> ${shipment.destination}`
-                                : shipment.origin || shipment.destination || '--'
+                              {shipment.origin_country && shipment.destination_country
+                                ? `${shipment.origin_country} -> ${shipment.destination_country}`
+                                : shipment.origin_country || shipment.destination_country || '--'
                               }
                             </span>
                           </td>
@@ -894,25 +884,18 @@ export default function Shipments() {
           />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0, columnGap: 12 }}>
             <Field
-              label="Origin"
-              value={shipmentForm.origin}
-              onChange={v => setShipmentForm(f => ({ ...f, origin: v }))}
-              placeholder="e.g. Shenzhen, CN"
+              label="Origin Country"
+              value={shipmentForm.origin_country}
+              onChange={v => setShipmentForm(f => ({ ...f, origin_country: v }))}
+              placeholder="e.g. China"
             />
             <Field
-              label="Destination"
-              value={shipmentForm.destination}
-              onChange={v => setShipmentForm(f => ({ ...f, destination: v }))}
-              placeholder="e.g. Los Angeles, US"
+              label="Destination Country"
+              value={shipmentForm.destination_country}
+              onChange={v => setShipmentForm(f => ({ ...f, destination_country: v }))}
+              placeholder="e.g. United States"
             />
           </div>
-          <Select
-            label="Order (optional)"
-            value={shipmentForm.order_id}
-            onChange={v => setShipmentForm(f => ({ ...f, order_id: v }))}
-            options={ordersList.map(o => ({ value: o.id, label: o.order_number || o.id }))}
-            placeholder="Link to an order..."
-          />
           <Field
             label="Notes"
             value={shipmentForm.notes}

@@ -167,9 +167,8 @@ export default function PurchaseOrderDetail() {
       purchase_order_id: id,
       product_id: product.id,
       name: product.name,
-      sku: product.sku || '',
       quantity: 1,
-      unit_price: product.cost_price || 0,
+      unit_cost: product.cost_price || 0,
     }
     setItems(prev => [...prev, newItem])
     setDirty(true)
@@ -183,9 +182,8 @@ export default function PurchaseOrderDetail() {
       purchase_order_id: id,
       product_id: null,
       name: '',
-      sku: '',
       quantity: 1,
-      unit_price: 0,
+      unit_cost: 0,
     }
     setItems(prev => [...prev, newItem])
     setDirty(true)
@@ -196,7 +194,7 @@ export default function PurchaseOrderDetail() {
   // ─── Calculations ─────────────────────────────────────────
 
   const subtotal = items.reduce((sum, it) => {
-    return sum + ((parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0))
+    return sum + ((parseFloat(it.quantity) || 0) * (parseFloat(it.unit_cost) || 0))
   }, 0)
 
   const total = subtotal
@@ -241,6 +239,8 @@ export default function PurchaseOrderDetail() {
 
       // Upsert items
       for (const item of items) {
+        const qty = parseInt(item.quantity) || 0
+        const cost = parseFloat(item.unit_cost) || 0
         if (item._isNew) {
           const { error: insErr } = await supabase
             .from('purchase_order_items')
@@ -248,9 +248,9 @@ export default function PurchaseOrderDetail() {
               purchase_order_id: id,
               product_id: item.product_id || null,
               name: item.name,
-              sku: item.sku,
-              quantity: parseInt(item.quantity) || 0,
-              unit_price: parseFloat(item.unit_price) || 0,
+              quantity: qty,
+              unit_cost: cost,
+              total: qty * cost,
             })
           if (insErr) throw insErr
         } else {
@@ -258,10 +258,9 @@ export default function PurchaseOrderDetail() {
             .from('purchase_order_items')
             .update({
               name: item.name,
-              sku: item.sku,
-              quantity: parseInt(item.quantity) || 0,
-              unit_price: parseFloat(item.unit_price) || 0,
-              updated_at: new Date().toISOString(),
+              quantity: qty,
+              unit_cost: cost,
+              total: qty * cost,
             })
             .eq('id', item.id)
           if (updErr) throw updErr
@@ -315,6 +314,8 @@ export default function PurchaseOrderDetail() {
 
       // Persist items before sending
       for (const item of items) {
+        const qty = parseInt(item.quantity) || 0
+        const cost = parseFloat(item.unit_cost) || 0
         if (item._isNew) {
           await supabase
             .from('purchase_order_items')
@@ -322,19 +323,18 @@ export default function PurchaseOrderDetail() {
               purchase_order_id: id,
               product_id: item.product_id || null,
               name: item.name,
-              sku: item.sku,
-              quantity: parseInt(item.quantity) || 0,
-              unit_price: parseFloat(item.unit_price) || 0,
+              quantity: qty,
+              unit_cost: cost,
+              total: qty * cost,
             })
         } else {
           await supabase
             .from('purchase_order_items')
             .update({
               name: item.name,
-              sku: item.sku,
-              quantity: parseInt(item.quantity) || 0,
-              unit_price: parseFloat(item.unit_price) || 0,
-              updated_at: new Date().toISOString(),
+              quantity: qty,
+              unit_cost: cost,
+              total: qty * cost,
             })
             .eq('id', item.id)
         }
@@ -345,9 +345,8 @@ export default function PurchaseOrderDetail() {
         supplier_name: supplier.company_name || '',
         items: items.map(it => ({
           name: it.name,
-          sku: it.sku,
           quantity: it.quantity,
-          unit_price: it.unit_price,
+          unit_price: it.unit_cost,
         })),
         subtotal,
         total,
@@ -751,10 +750,10 @@ export default function PurchaseOrderDetail() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr>
-                    {['Name', 'SKU', 'Qty', 'Unit Price', 'Total', ...(isViewer ? [] : [''])].map(h => (
+                    {['Name', 'Qty', 'Unit Cost', 'Total', ...(isViewer ? [] : [''])].map(h => (
                       <th key={h || '_actions'} style={{
                         padding: '8px 16px',
-                        textAlign: h === 'Name' || h === 'SKU' ? 'left' : (h === '' ? 'center' : 'right'),
+                        textAlign: h === 'Name' ? 'left' : (h === '' ? 'center' : 'right'),
                         fontSize: 11, fontWeight: 600, color: c.textSecondary,
                         textTransform: 'uppercase', letterSpacing: '0.05em',
                         borderBottom: `2px solid ${c.border}`, borderTop: `1px solid ${c.border}`,
@@ -768,8 +767,8 @@ export default function PurchaseOrderDetail() {
                 <tbody>
                   {items.map((item, idx) => {
                     const qty = parseFloat(item.quantity) || 0
-                    const unitPrice = parseFloat(item.unit_price) || 0
-                    const lineTotal = qty * unitPrice
+                    const unitCost = parseFloat(item.unit_cost) || 0
+                    const lineTotal = qty * unitCost
                     return (
                       <tr key={item.id || `new-${idx}`} style={{
                         borderBottom: `1px solid ${c.border}`,
@@ -794,31 +793,6 @@ export default function PurchaseOrderDetail() {
                           ) : (
                             <span style={{ color: c.text, fontWeight: 500 }}>
                               {item.name || '-'}
-                            </span>
-                          )}
-                        </td>
-                        {/* SKU */}
-                        <td style={{ padding: '10px 16px' }}>
-                          {!isViewer ? (
-                            <input
-                              type="text"
-                              value={item.sku || ''}
-                              onChange={e => updateItem(idx, 'sku', e.target.value)}
-                              placeholder="SKU"
-                              style={{
-                                width: 100, padding: '4px 8px',
-                                fontSize: 12, fontFamily: 'monospace', background: c.inputBg,
-                                color: c.text, border: `1px solid ${c.border}`,
-                                borderRadius: 6, outline: 'none',
-                              }}
-                              onFocus={e => { e.target.style.borderColor = c.accent }}
-                              onBlur={e => { e.target.style.borderColor = c.border }}
-                            />
-                          ) : (
-                            <span style={{
-                              color: c.textSecondary, fontFamily: 'monospace', fontSize: 12,
-                            }}>
-                              {item.sku || '-'}
                             </span>
                           )}
                         </td>
@@ -848,13 +822,13 @@ export default function PurchaseOrderDetail() {
                             </span>
                           )}
                         </td>
-                        {/* Unit Price */}
+                        {/* Unit Cost */}
                         <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                           {!isViewer ? (
                             <input
                               type="number"
-                              value={item.unit_price ?? ''}
-                              onChange={e => updateItem(idx, 'unit_price', e.target.value)}
+                              value={item.unit_cost ?? ''}
+                              onChange={e => updateItem(idx, 'unit_cost', e.target.value)}
                               min="0"
                               step="0.01"
                               style={{
@@ -870,7 +844,7 @@ export default function PurchaseOrderDetail() {
                             <span style={{
                               color: c.text, fontVariantNumeric: 'tabular-nums',
                             }}>
-                              {formatUSD(unitPrice)}
+                              {formatUSD(unitCost)}
                             </span>
                           )}
                         </td>
@@ -906,7 +880,7 @@ export default function PurchaseOrderDetail() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={isViewer ? 4 : 4} style={{
+                    <td colSpan={3} style={{
                       padding: '10px 16px', textAlign: 'right', color: c.textSecondary,
                       fontSize: 12, fontWeight: 600, textTransform: 'uppercase',
                       letterSpacing: '0.05em',

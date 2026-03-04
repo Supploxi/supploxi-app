@@ -329,24 +329,24 @@ export default function Orders() {
   }, 0)
 
   async function saveOrder() {
-    if (!orderForm.customer_name.trim()) { setOrderError('Customer name is required.'); return }
     if (orderForm.items.length === 0 || !orderForm.items[0].product_id) { setOrderError('At least one item is required.'); return }
     setOrderSaving(true)
     setOrderError('')
     try {
-      const orderNumber = `MAN-${Date.now().toString(36).toUpperCase()}`
+      const orderNumber = `ORD-${Date.now().toString().slice(-6)}`
+      // Merge customer info into notes since orders table has no customer_name/email columns
+      const noteParts = [
+        orderForm.customer_name.trim() ? `Customer: ${orderForm.customer_name.trim()}` : '',
+        orderForm.customer_email.trim() ? `Email: ${orderForm.customer_email.trim()}` : '',
+        orderForm.notes.trim() || '',
+      ].filter(Boolean)
       const { data: newOrder, error: orderErr } = await supabase.from('orders').insert({
         order_number: orderNumber,
-        customer_name: orderForm.customer_name.trim(),
-        customer_email: orderForm.customer_email.trim() || null,
         status: orderForm.status,
-        financial_status: orderForm.status === 'Pending' ? 'Pending Payment' : 'Paid',
-        fulfillment_status: 'Unfulfilled',
         payment_method: orderForm.payment_method,
-        notes: orderForm.notes.trim() || null,
+        notes: noteParts.join(' | ') || null,
         subtotal: orderSubtotal,
         total: orderSubtotal,
-        source: 'manual',
         user_id: user?.id,
       }).select('id').single()
       if (orderErr) throw orderErr
