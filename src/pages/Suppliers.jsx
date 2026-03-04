@@ -247,11 +247,19 @@ export default function Suppliers() {
 
   async function handleDelete() {
     if (isViewer || !confirmDelete) return
-    const { error: delErr } = await supabase.from('suppliers').delete().eq('id', confirmDelete.id)
-    if (!delErr) {
+    try {
+      const { error: delErr } = await supabase
+        .from('suppliers')
+        .delete()
+        .eq('id', confirmDelete.id)
+        .eq('user_id', user?.id)
+      if (delErr) throw delErr
       setSuppliers(arr => arr.filter(s => s.id !== confirmDelete.id))
+    } catch (e) {
+      console.error('Failed to delete supplier:', e.message)
+    } finally {
+      setConfirmDelete(null)
     }
-    setConfirmDelete(null)
   }
 
   function renderCategoryTag(category) {
