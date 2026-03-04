@@ -693,10 +693,7 @@ export function ConfirmModal({ open, onClose, onConfirm, title = 'Confirm', mess
       <p style={{ fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>{message}</p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
         <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-        <Btn variant={variant} onClick={() => {
-          console.log('ConfirmModal button clicked, onConfirm:', typeof onConfirm)
-          if (onConfirm) onConfirm()
-        }}>{confirmText}</Btn>
+        <Btn variant={variant} onClick={onConfirm}>{confirmText}</Btn>
       </div>
     </Modal>
   )
