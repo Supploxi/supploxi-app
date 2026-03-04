@@ -105,7 +105,7 @@ export default function Orders() {
     try {
       let query = supabase
         .from('orders')
-        .select('*', { count: 'exact' })
+        .select('*, customers(name, email)', { count: 'exact' })
         .order(sortField || 'created_at', { ascending: sortDir === 'asc' })
 
       if (dateRange.from) {
@@ -138,18 +138,14 @@ export default function Orders() {
       const q = search.toLowerCase().trim()
       result = result.filter(o =>
         (o.order_number || '').toLowerCase().includes(q) ||
-        (o.customer_name || '').toLowerCase().includes(q) ||
-        (o.customer_email || '').toLowerCase().includes(q)
+        (o.customers?.name || '').toLowerCase().includes(q) ||
+        (o.customers?.email || '').toLowerCase().includes(q)
       )
     }
 
     // Status filter
     if (statusFilter !== 'All') {
-      result = result.filter(o =>
-        o.financial_status === statusFilter ||
-        o.fulfillment_status === statusFilter ||
-        o.status === statusFilter
-      )
+      result = result.filter(o => o.status === statusFilter)
     }
 
     // Tag filter
@@ -333,19 +329,32 @@ export default function Orders() {
     setOrderSaving(true)
     setOrderError('')
     try {
+      // Create customer first
+      let customerId = null
+      if (orderForm.customer_name.trim()) {
+        const { data: customerData, error: custErr } = await supabase
+          .from('customers')
+          .insert({
+            user_id: user?.id,
+            name: orderForm.customer_name.trim(),
+            email: orderForm.customer_email.trim() || null,
+          })
+          .select('id')
+          .single()
+        if (custErr) throw custErr
+        customerId = customerData.id
+      }
+
       const orderNumber = `ORD-${Date.now().toString().slice(-6)}`
-      // Merge customer info into notes since orders table has no customer_name/email columns
-      const noteParts = [
-        orderForm.customer_name.trim() ? `Customer: ${orderForm.customer_name.trim()}` : '',
-        orderForm.customer_email.trim() ? `Email: ${orderForm.customer_email.trim()}` : '',
-        orderForm.notes.trim() || '',
-      ].filter(Boolean)
       const { data: newOrder, error: orderErr } = await supabase.from('orders').insert({
         order_number: orderNumber,
+        customer_id: customerId,
         status: orderForm.status,
         payment_method: orderForm.payment_method,
-        notes: noteParts.join(' | ') || null,
+        notes: orderForm.notes.trim() || null,
         subtotal: orderSubtotal,
+        shipping: 0,
+        tax: 0,
         total: orderSubtotal,
         user_id: user?.id,
       }).select('id').single()
@@ -519,17 +528,17 @@ export default function Orders() {
                     <span style={{ color: c.text, fontWeight: 700, fontSize: 14, fontFamily: 'monospace' }}>
                       {order.order_number}
                     </span>
-                    <Badge variant={statusVariant(order.financial_status)}>
-                      {order.financial_status || 'Unknown'}
+                    <Badge variant={statusVariant(order.status)}>
+                      {order.status || 'Unknown'}
                     </Badge>
                   </div>
                   <div style={{ color: c.text, fontSize: 14, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {order.customer_name || '--'}
+                    {order.customers?.name || '--'}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <Badge variant={fulfillmentVariant(order.fulfillment_status)} style={{ fontSize: 10 }}>
-                      {order.fulfillment_status || 'Unfulfilled'}
-                    </Badge>
+                    <span style={{ color: c.textSecondary, fontSize: 12 }}>
+                      {order.payment_method || '--'}
+                    </span>
                     <span style={{ color: c.text, fontWeight: 700, fontSize: 15 }}>
                       {formatUSD(order.total)}
                     </span>
@@ -568,8 +577,7 @@ export default function Orders() {
                   <tr style={{ background: c.surfaceHover }}>
                     <SortHeader label="Order #" field="order_number" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Customer" field="customer_name" sortField={sortField} sortDir={sortDir} onSort={onSort} />
-                    <SortHeader label="Status" field="financial_status" sortField={sortField} sortDir={sortDir} onSort={onSort} />
-                    <SortHeader label="Fulfillment" field="fulfillment_status" sortField={sortField} sortDir={sortDir} onSort={onSort} />
+                    <SortHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Total" field="total" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                     <SortHeader label="Date" field="created_at" sortField={sortField} sortDir={sortDir} onSort={onSort} />
                   </tr>
@@ -594,22 +602,17 @@ export default function Orders() {
                       </td>
                       <td style={{ padding: '12px', maxWidth: 220 }}>
                         <div style={{ color: c.text, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {order.customer_name || '--'}
+                          {order.customers?.name || '--'}
                         </div>
-                        {order.customer_email && (
+                        {order.customers?.email && (
                           <div style={{ color: c.textMuted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-                            {order.customer_email}
+                            {order.customers.email}
                           </div>
                         )}
                       </td>
                       <td style={{ padding: '12px' }}>
-                        <Badge variant={statusVariant(order.financial_status)}>
-                          {order.financial_status || 'Unknown'}
-                        </Badge>
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <Badge variant={fulfillmentVariant(order.fulfillment_status)}>
-                          {order.fulfillment_status || 'Unfulfilled'}
+                        <Badge variant={statusVariant(order.status)}>
+                          {order.status || 'Unknown'}
                         </Badge>
                       </td>
                       <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>

@@ -60,9 +60,9 @@ export default function Dashboard() {
         const [ordersRes, shipmentsRes] = await Promise.all([
           supabase
             .from('orders')
-            .select('*')
-            .gte('created_at', `${dateRange.from}T00:00:00`)
-            .lte('created_at', `${dateRange.to}T23:59:59`)
+            .select('*, customers(name, email)')
+            .gte('created_at', `${dateRange.from}T00:00:00.000Z`)
+            .lte('created_at', `${dateRange.to}T23:59:59.999Z`)
             .order('created_at', { ascending: false }),
           supabase
             .from('shipments')
@@ -393,7 +393,7 @@ export default function Dashboard() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: c.textSecondary, fontSize: 12 }}>
-                    {order.customer_name || order.customer_email || '-'}
+                    {order.customers?.name || order.customers?.email || '-'}
                   </span>
                   <span style={{ color: c.textMuted, fontSize: 11 }}>
                     {formatDate(order.created_at)}
@@ -429,7 +429,7 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td style={{ color: c.text }}>
-                      {order.customer_name || order.customer_email || '-'}
+                      {order.customers?.name || order.customers?.email || '-'}
                     </td>
                     <td style={{ color: c.textSecondary }}>
                       {formatDate(order.created_at)}

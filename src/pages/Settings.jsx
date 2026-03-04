@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useColors, Card, SectionTitle, Btn, Field, Select, Textarea, Tabs, Badge, Modal, Alert, Checkbox, Icons, Loading } from '../components/UI'
+import { useColors, Card, SectionTitle, Btn, Field, Select, Textarea, Tabs, Badge, Modal, Alert, Checkbox, Icons, Loading, formatDate } from '../components/UI'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import useIsMobile from '../hooks/useIsMobile'
@@ -269,7 +269,7 @@ export default function Settings() {
       const { data: invites } = await supabase
         .from('invitations')
         .select('*')
-        .eq('used', false)
+        .eq('accepted', false)
         .order('created_at', { ascending: false })
       setInvitations(invites || [])
     } catch (e) {
@@ -304,16 +304,13 @@ export default function Settings() {
     setError('')
     try {
       const token = generateToken()
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
       const { error: err } = await supabase.from('invitations').insert({
+        user_id: user?.id,
         email: inviteEmail.trim().toLowerCase(),
         role: inviteRole,
-        permissions: invitePerms,
         token,
-        expires_at: expiresAt,
-        invited_by: user?.id || null,
-        used: false,
+        accepted: false,
       })
       if (err) throw err
 
@@ -334,10 +331,9 @@ export default function Settings() {
     setError('')
     try {
       const newToken = generateToken()
-      const newExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       const { error: err } = await supabase
         .from('invitations')
-        .update({ token: newToken, expires_at: newExpiry })
+        .update({ token: newToken })
         .eq('id', inv.id)
       if (err) throw err
       flash('Invitation resent with new token.')
@@ -472,8 +468,6 @@ export default function Settings() {
       return <Alert variant="warning">Only administrators can manage team members.</Alert>
     }
 
-    const isExpired = (inv) => inv.expires_at && new Date(inv.expires_at) < new Date()
-
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -551,13 +545,11 @@ export default function Settings() {
             <SectionTitle>Pending Invitations</SectionTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {invitations.map((inv, idx) => {
-                const expired = isExpired(inv)
                 return (
                   <div key={inv.id} style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '12px 14px',
                     borderTop: idx > 0 ? `1px solid ${c.border}` : 'none',
-                    opacity: expired ? 0.6 : 1,
                   }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: '50%',
@@ -577,18 +569,10 @@ export default function Settings() {
                         </span>
                         {inv.role === 'operator' && <Badge variant="default">OPERATOR</Badge>}
                         {inv.role === 'viewer' && <Badge variant="warning">VIEWER</Badge>}
-                        {expired ? (
-                          <Badge variant="danger">EXPIRED</Badge>
-                        ) : (
-                          <Badge variant="info">PENDING</Badge>
-                        )}
+                        <Badge variant="info">PENDING</Badge>
                       </div>
                       <div style={{ color: c.textMuted, fontSize: 12, marginTop: 1 }}>
-                        {inv.expires_at && (
-                          expired
-                            ? 'Expired on ' + new Date(inv.expires_at).toLocaleDateString()
-                            : 'Expires ' + new Date(inv.expires_at).toLocaleDateString()
-                        )}
+                        Invited {formatDate(inv.created_at)}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>

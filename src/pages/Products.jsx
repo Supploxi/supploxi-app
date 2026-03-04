@@ -160,8 +160,19 @@ export default function Products() {
         if (updErr) throw updErr
       } else {
         payload.user_id = user?.id
-        const { error: insErr } = await supabase.from('products').insert(payload)
+        const { data: newProduct, error: insErr } = await supabase.from('products').insert(payload).select('id').single()
         if (insErr) throw insErr
+        // Create initial stock movement if stock_quantity > 0
+        const initQty = parseInt(form.stock_quantity) || 0
+        if (initQty > 0 && newProduct?.id) {
+          await supabase.from('inventory_movements').insert({
+            user_id: user?.id,
+            product_id: newProduct.id,
+            type: 'adjustment',
+            quantity: initQty,
+            notes: 'Initial stock on product creation',
+          })
+        }
       }
       await load()
       setShowModal(false)
